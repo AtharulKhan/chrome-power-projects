@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Saved Groups Fix</title>
+    <script>
+      // Test the saved groups functionality
+      async function testSaveGroup() {
+        // Create a test saved group
+        const testGroup = {
+          id: Date.now().toString(),
+          name: "Test Group " + new Date().toLocaleTimeString(),
+          color: "blue",
+          tabs: [
+            {
+              title: "Google",
+              url: "https://google.com",
+              favIconUrl: "https://google.com/favicon.ico",
+              pinned: false,
+            },
+            {
+              title: "GitHub",
+              url: "https://github.com",
+              favIconUrl: "https://github.com/favicon.ico",
+              pinned: false,
+            },
+          ],
+          savedAt: new Date().toISOString(),
+          tabCount: 2,
+        };
+
+        try {
+          // Get current saved groups
+          const result = await chrome.storage.local.get("savedGroups");
+          const savedGroups = result.savedGroups || [];
+
+          // Add new group
+          savedGroups.unshift(testGroup);
+
+          // Save back to storage
+          await chrome.storage.local.set({ savedGroups: savedGroups });
+
+          console.log("Saved group successfully:", testGroup);
+          document.getElementById("result").textContent =
+            "Group saved successfully!";
+
+          // Load and display saved groups
+          await loadSavedGroups();
+        } catch (error) {
+          console.error("Error saving group:", error);
+          document.getElementById("result").textContent =
+            "Error: " + error.message;
+        }
+      }
+
+      async function loadSavedGroups() {
+        try {
+          const result = await chrome.storage.local.get("savedGroups");
+          const savedGroups = result.savedGroups || [];
+
+          console.log("Loaded saved groups:", savedGroups);
+
+          const container = document.getElementById("saved-groups");
+          if (savedGroups.length === 0) {
+            container.innerHTML = "<p>No saved groups found</p>";
+          } else {
+            container.innerHTML = savedGroups
+              .map(
+                (group) => `
+                    <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                        <h3>${group.name}</h3>
+                        <p>Saved at: ${new Date(
+                          group.savedAt
+                        ).toLocaleString()}</p>
+                        <p>Tabs: ${group.tabCount || group.tabs.length}</p>
+                        <ul>
+                            ${group.tabs
+                              .map(
+                                (tab) => `<li>${tab.title} - ${tab.url}</li>`
+                              )
+                              .join("")}
+                        </ul>
+                    </div>
+                `
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("Error loading saved groups:", error);
+          document.getElementById("saved-groups").innerHTML =
+            "<p>Error loading: " + error.message + "</p>";
+        }
+      }
+
+      async function clearSavedGroups() {
+        try {
+          await chrome.storage.local.set({ savedGroups: [] });
+          console.log("Cleared all saved groups");
+          document.getElementById("result").textContent =
+            "All saved groups cleared!";
+          await loadSavedGroups();
+        } catch (error) {
+          console.error("Error clearing saved groups:", error);
+          document.getElementById("result").textContent =
+            "Error: " + error.message;
+        }
+      }
+
+      // Load on page load
+      document.addEventListener("DOMContentLoaded", loadSavedGroups);
+    </script>
+  </head>
+  <body>
+    <h1>Test Saved Groups</h1>
+    <button onclick="testSaveGroup()">Save Test Group</button>
+    <button onclick="loadSavedGroups()">Reload Saved Groups</button>
+    <button onclick="clearSavedGroups()">Clear All Saved Groups</button>
+
+    <div
+      id="result"
+      style="margin: 20px 0; padding: 10px; background: #f0f0f0"
+    ></div>
+
+    <h2>Saved Groups:</h2>
+    <div id="saved-groups"></div>
+  </body>
+</html>

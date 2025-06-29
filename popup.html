@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floating Sleek Search Bar</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      body {
+        background: transparent;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="floating-bar">
+      <div id="options">
+        <label class="option">
+          <input type="checkbox" id="opt-bookmarks" checked />
+          <span>Favourites</span>
+        </label>
+        <label class="option">
+          <input type="checkbox" id="opt-tabs" checked />
+          <span>Tabs</span>
+        </label>
+        <label class="option">
+          <input type="checkbox" id="opt-history" checked />
+          <span>History</span>
+        </label>
+      </div>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Search bookmarks, tabs, or history..."
+        autocomplete="off"
+        autofocus
+      />
+      <ul id="results"></ul>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

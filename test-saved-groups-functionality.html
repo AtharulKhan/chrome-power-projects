@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Saved Groups Functionality</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+      #output {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        white-space: pre-wrap;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test Saved Groups Functionality</h1>
+
+    <div class="test-section">
+      <h2>1. Test Chrome Storage API</h2>
+      <button onclick="testChromeStorage()">Test Chrome Storage</button>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Test SavedGroupsManager</h2>
+      <button onclick="testSavedGroupsManager()">
+        Test SavedGroupsManager
+      </button>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Test Save Group</h2>
+      <button onclick="testSaveGroup()">Save Test Group</button>
+    </div>
+
+    <div class="test-section">
+      <h2>4. View Current Saved Groups</h2>
+      <button onclick="viewSavedGroups()">View Saved Groups</button>
+    </div>
+
+    <div class="test-section">
+      <h2>5. Clear All Saved Groups</h2>
+      <button onclick="clearSavedGroups()">Clear All Groups</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script src="sidebar-saved-groups.js"></script>
+    <script>
+      const output = document.getElementById("output");
+
+      function log(message, type = "") {
+        output.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()}: ${message}</div>`;
+      }
+
+      async function testChromeStorage() {
+        try {
+          log("Testing Chrome Storage API...");
+
+          // Test write
+          await chrome.storage.local.set({ test: "Hello World" });
+          log("Write test: SUCCESS", "success");
+
+          // Test read
+          const result = await chrome.storage.local.get("test");
+          log(
+            `Read test: ${
+              result.test === "Hello World" ? "SUCCESS" : "FAILED"
+            }`,
+            result.test === "Hello World" ? "success" : "error"
+          );
+
+          // Clean up
+          await chrome.storage.local.remove("test");
+          log("Cleanup: SUCCESS", "success");
+        } catch (error) {
+          log(`Chrome Storage Error: ${error.message}`, "error");
+        }
+      }
+
+      async function testSavedGroupsManager() {
+        try {
+          log("Testing SavedGroupsManager...");
+
+          // Check if manager exists
+          if (window.savedGroupsManager) {
+            log("SavedGroupsManager exists: SUCCESS", "success");
+
+            // Load groups
+            const groups = await window.savedGroupsManager.loadGroups();
+            log(`Loaded ${groups.length} groups`, "success");
+          } else {
+            log("SavedGroupsManager not found!", "error");
+          }
+        } catch (error) {
+          log(`SavedGroupsManager Error: ${error.message}`, "error");
+        }
+      }
+
+      async function testSaveGroup() {
+        try {
+          log("Testing save group functionality...");
+
+          const testGroup = {
+            name: `Test Group ${new Date().toLocaleTimeString()}`,
+            color: "blue",
+            tabs: [
+              {
+                title: "Google",
+                url: "https://www.google.com",
+                favIconUrl: "https://www.google.com/favicon.ico",
+                pinned: false,
+              },
+              {
+                title: "GitHub",
+                url: "https://github.com",
+                favIconUrl: "https://github.com/favicon.ico",
+                pinned: false,
+              },
+            ],
+          };
+
+          const savedGroup = await window.savedGroupsManager.saveGroup(
+            testGroup
+          );
+          log(`Group saved successfully: ${savedGroup.name}`, "success");
+          log(`Group ID: ${savedGroup.id}`);
+          log(`Tabs count: ${savedGroup.tabCount}`);
+        } catch (error) {
+          log(`Save Group Error: ${error.message}`, "error");
+        }
+      }
+
+      async function viewSavedGroups() {
+        try {
+          log("Loading saved groups...");
+          const groups = await window.savedGroupsManager.loadGroups();
+
+          if (groups.length === 0) {
+            log("No saved groups found");
+          } else {
+            log(`Found ${groups.length} saved groups:`);
+            groups.forEach((group, index) => {
+              log(
+                `${index + 1}. ${group.name} (${group.tabCount} tabs) - ID: ${
+                  group.id
+                }`
+              );
+            });
+          }
+        } catch (error) {
+          log(`View Groups Error: ${error.message}`, "error");
+        }
+      }
+
+      async function clearSavedGroups() {
+        if (confirm("Are you sure you want to clear all saved groups?")) {
+          try {
+            await chrome.storage.local.set({ savedGroups: [] });
+            window.savedGroupsManager.savedGroups = [];
+            log("All saved groups cleared", "success");
+          } catch (error) {
+            log(`Clear Groups Error: ${error.message}`, "error");
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

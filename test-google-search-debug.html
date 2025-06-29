@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Search Debug Test</title>
+    <style>
+      body {
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 15px;
+      }
+      .google-search-option {
+        padding: 12px 20px;
+        margin: 8px 12px;
+        background: linear-gradient(
+          135deg,
+          rgba(66, 133, 244, 0.1) 0%,
+          rgba(234, 67, 53, 0.08) 50%,
+          rgba(251, 188, 5, 0.06) 100%
+        );
+        border: 1px solid rgba(66, 133, 244, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1a73e8;
+      }
+
+      .google-search-option:hover {
+        background: linear-gradient(
+          135deg,
+          rgba(66, 133, 244, 0.15) 0%,
+          rgba(234, 67, 53, 0.12) 50%,
+          rgba(251, 188, 5, 0.1) 100%
+        );
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.25);
+      }
+
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+      .success {
+        color: #4caf50;
+        font-weight: bold;
+      }
+      .error {
+        color: #f44336;
+        font-weight: bold;
+      }
+      .log-output {
+        background: #333;
+        color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Google Search Debug Test</h1>
+
+    <div class="test-section">
+      <h2>1. Current Implementation Issue</h2>
+      <p>The Google search isn't working because:</p>
+      <ul>
+        <li>The event handler is properly set up with event delegation</li>
+        <li>The data attribute is correctly set with the escaped query</li>
+        <li>But the click might not be propagating correctly</li>
+      </ul>
+
+      <h3>Test Google Search Options:</h3>
+      <div id="test-search-results">
+        <!-- This will be populated by JavaScript -->
+      </div>
+
+      <div class="log-output" id="log-output">
+        Console log will appear here...
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Fixed Implementation</h2>
+      <p>Here's what needs to be done:</p>
+      <pre>
+// In the event delegation, ensure we're handling the click properly:
+const googleSearchOption = target.closest(".google-search-option");
+if (googleSearchOption) {
+  e.preventDefault();
+  e.stopPropagation(); // Add this to prevent event bubbling
+  const query = googleSearchOption.dataset.searchQuery;
+  if (query) {
+    console.log("Searching Google for:", query);
+    this.searchOnGoogle(query);
+  }
+}</pre
+      >
+    </div>
+
+    <div class="test-section">
+      <h2>3. Project Search Feature</h2>
+      <p>The project search functionality is already implemented:</p>
+      <ul>
+        <li>✅ Search icon added to projects bar header</li>
+        <li>✅ Click handler connected to openProjectSearch()</li>
+        <li>✅ Search functionality filters projects by name</li>
+        <li>✅ Simple prompt-based UI for selecting filtered projects</li>
+      </ul>
+
+      <button id="test-project-search">Test Project Search</button>
+    </div>
+
+    <script>
+      // Simulate the sidebar object
+      const sidebar = {
+        searchOnGoogle(query) {
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+            query
+          )}`;
+          console.log(`Would open: ${searchUrl}`);
+          document.getElementById(
+            "log-output"
+          ).innerHTML += `<br>Opening: ${searchUrl}`;
+          // In real extension: chrome.tabs.create({ url: searchUrl });
+        },
+
+        escapeHtml(text) {
+          const div = document.createElement("div");
+          div.textContent = text;
+          return div.innerHTML;
+        },
+      };
+
+      // Test rendering search results
+      function renderTestSearchResults() {
+        const container = document.getElementById("test-search-results");
+        const testQuery = "seo agency";
+
+        // Test the current implementation
+        container.innerHTML = `
+        <div class="google-search-option" data-search-query="${sidebar.escapeHtml(
+          testQuery
+        )}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          Search "<strong>${sidebar.escapeHtml(testQuery)}</strong>" on Google
+        </div>
+      `;
+      }
+
+      // Add event listener
+      document.addEventListener("click", (e) => {
+        const target = e.target;
+        const googleSearchOption = target.closest(".google-search-option");
+
+        if (googleSearchOption) {
+          e.preventDefault();
+          e.stopPropagation();
+          const query = googleSearchOption.dataset.searchQuery;
+          console.log("Click detected! Query:", query);
+          document.getElementById(
+            "log-output"
+          ).innerHTML += `<br>Click detected! Query: ${query}`;
+
+          if (query) {
+            sidebar.searchOnGoogle(query);
+          }
+        }
+      });
+
+      // Test project search
+      document
+        .getElementById("test-project-search")
+        .addEventListener("click", () => {
+          alert(
+            "Project search would open here with a prompt asking for search query"
+          );
+        });
+
+      // Initialize test
+      renderTestSearchResults();
+
+      console.log("Debug test loaded. Click the search option to test.");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saved Groups Test</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .controls {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+      }
+
+      button {
+        padding: 8px 16px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button.secondary {
+        background: #6c757d;
+      }
+
+      button.secondary:hover {
+        background: #5a6268;
+      }
+
+      button.danger {
+        background: #dc3545;
+      }
+
+      button.danger:hover {
+        background: #c82333;
+      }
+
+      .saved-groups-container {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        min-height: 200px;
+      }
+
+      .saved-group {
+        margin-bottom: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+      }
+
+      .saved-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .saved-group-title {
+        font-weight: bold;
+        font-size: 16px;
+        color: #333;
+      }
+
+      .saved-group-info {
+        font-size: 12px;
+        color: #6c757d;
+      }
+
+      .saved-group-tabs {
+        margin-top: 10px;
+      }
+
+      .tab-item {
+        padding: 8px;
+        margin-bottom: 5px;
+        background: white;
+        border-radius: 4px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tab-favicon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      .tab-title {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .no-groups {
+        text-align: center;
+        color: #6c757d;
+        padding: 40px;
+      }
+
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      input[type="text"] {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+        width: 200px;
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Saved Groups Test</h1>
+
+      <div class="controls">
+        <h3>Test Controls</h3>
+        <input type="text" id="groupName" placeholder="Enter group name" />
+        <button onclick="saveTestGroup()">Save Test Group</button>
+        <button onclick="loadSavedGroups()" class="secondary">
+          Reload Groups
+        </button>
+        <button onclick="clearAllGroups()" class="danger">
+          Clear All Groups
+        </button>
+      </div>
+
+      <div id="status" class="status" style="display: none"></div>
+
+      <h2>Saved Groups</h2>
+      <div id="savedGroupsContainer" class="saved-groups-container">
+        <div class="no-groups">No saved groups yet</div>
+      </div>
+    </div>
+
+    <script>
+      // Saved Groups Manager
+      class SavedGroupsManager {
+        constructor() {
+          this.savedGroups = [];
+          this.storageKey = "savedGroups";
+        }
+
+        // Load saved groups from Chrome storage
+        async loadGroups() {
+          try {
+            const result = await chrome.storage.local.get(this.storageKey);
+            this.savedGroups = result[this.storageKey] || [];
+            console.log("Loaded saved groups:", this.savedGroups);
+            return this.savedGroups;
+          } catch (error) {
+            console.error("Error loading saved groups:", error);
+            showStatus("Error loading saved groups: " + error.message, "error");
+            return [];
+          }
+        }
+
+        // Save a new group
+        async saveGroup(name, tabs, groupInfo = {}) {
+          try {
+            const newGroup = {
+              id: Date.now().toString(),
+              name: name || `Group ${new Date().toLocaleString()}`,
+              tabs: tabs,
+              groupInfo: groupInfo,
+              savedAt: new Date().toISOString(),
+              tabCount: tabs.length,
+            };
+
+            // Load current groups
+            await this.loadGroups();
+
+            // Add new group
+            this.savedGroups.unshift(newGroup);
+
+            // Save to storage
+            await chrome.storage.local.set({
+              [this.storageKey]: this.savedGroups,
+            });
+
+            console.log("Saved new group:", newGroup);
+            showStatus(
+              `Group "${newGroup.name}" saved successfully!`,
+              "success"
+            );
+
+            return newGroup;
+          } catch (error) {
+            console.error("Error saving group:", error);
+            showStatus("Error saving group: " + error.message, "error");
+            throw error;
+          }
+        }
+
+        // Delete a saved group
+        async deleteGroup(groupId) {
+          try {
+            // Load current groups
+            await this.loadGroups();
+
+            // Filter out the group to delete
+            this.savedGroups = this.savedGroups.filter((g) => g.id !== groupId);
+
+            // Save updated list
+            await chrome.storage.local.set({
+              [this.storageKey]: this.savedGroups,
+            });
+
+            console.log("Deleted group:", groupId);
+            showStatus("Group deleted successfully!", "success");
+
+            return true;
+          } catch (error) {
+            console.error("Error deleting group:", error);
+            showStatus("Error deleting group: " + error.message, "error");
+            throw error;
+          }
+        }
+
+        // Clear all saved groups
+        async clearAllGroups() {
+          try {
+            this.savedGroups = [];
+            await chrome.storage.local.set({ [this.storageKey]: [] });
+            console.log("Cleared all saved groups");
+            showStatus("All saved groups cleared!", "success");
+            return true;
+          } catch (error) {
+            console.error("Error clearing groups:", error);
+            showStatus("Error clearing groups: " + error.message, "error");
+            throw error;
+          }
+        }
+
+        // Restore a saved group
+        async restoreGroup(groupId, inNewWindow = false) {
+          try {
+            const group = this.savedGroups.find((g) => g.id === groupId);
+            if (!group) {
+              throw new Error("Group not found");
+            }
+
+            console.log("Restoring group:", group);
+
+            // Create tabs
+            const tabIds = [];
+            const windowId = inNewWindow
+              ? null
+              : (await chrome.windows.getCurrent()).id;
+
+            for (let i = 0; i < group.tabs.length; i++) {
+              const tab = group.tabs[i];
+              const createProps = {
+                url: tab.url,
+                active: i === 0,
+                pinned: tab.pinned || false,
+              };
+
+              if (!inNewWindow && windowId) {
+                createProps.windowId = windowId;
+              }
+
+              const newTab = await chrome.tabs.create(createProps);
+              tabIds.push(newTab.id);
+            }
+
+            // Group the tabs if there's group info
+            if (group.groupInfo && group.groupInfo.title) {
+              const groupId = await chrome.tabs.group({ tabIds });
+              await chrome.tabGroups.update(groupId, {
+                title: group.groupInfo.title,
+                color: group.groupInfo.color || "blue",
+              });
+            }
+
+            showStatus(
+              `Group "${group.name}" restored successfully!`,
+              "success"
+            );
+            return true;
+          } catch (error) {
+            console.error("Error restoring group:", error);
+            showStatus("Error restoring group: " + error.message, "error");
+            throw error;
+          }
+        }
+      }
+
+      // Initialize manager
+      const manager = new SavedGroupsManager();
+
+      // UI Functions
+      function showStatus(message, type) {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = message;
+        statusEl.className = "status " + type;
+        statusEl.style.display = "block";
+
+        setTimeout(() => {
+          statusEl.style.display = "none";
+        }, 3000);
+      }
+
+      function renderSavedGroups(groups) {
+        const container = document.getElementById("savedGroupsContainer");
+
+        if (!groups || groups.length === 0) {
+          container.innerHTML =
+            '<div class="no-groups">No saved groups yet</div>';
+          return;
+        }
+
+        container.innerHTML = groups
+          .map(
+            (group) => `
+                <div class="saved-group" data-group-id="${group.id}">
+                    <div class="saved-group-header">
+                        <div>
+                            <div class="saved-group-title">${group.name}</div>
+                            <div class="saved-group-info">
+                                ${group.tabCount} tabs • Saved ${new Date(
+              group.savedAt
+            ).toLocaleString()}
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="restoreGroup('${
+                              group.id
+                            }')" class="secondary">Restore</button>
+                            <button onclick="restoreGroup('${
+                              group.id
+                            }', true)" class="secondary">New Window</button>
+                            <button onclick="deleteGroup('${
+                              group.id
+                            }')" class="danger">Delete</button>
+                        </div>
+                    </div>
+                    <div class="saved-group-tabs">
+                        ${group.tabs
+                          .slice(0, 3)
+                          .map(
+                            (tab) => `
+                            <div class="tab-item">
+                                <img class="tab-favicon" src="${
+                                  tab.favIconUrl ||
+                                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="%23ddd"/></svg>'
+                                }" alt="">
+                                <span class="tab-title">${tab.title}</span>
+                            </div>
+                        `
+                          )
+                          .join("")}
+                        ${
+                          group.tabs.length > 3
+                            ? `<div class="tab-item" style="color: #6c757d;">... and ${
+                                group.tabs.length - 3
+                              } more tabs</div>`
+                            : ""
+                        }
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      // Test Functions
+      async function saveTestGroup() {
+        const nameInput = document.getElementById("groupName");
+        const name = nameInput.value.trim() || "Test Group " + Date.now();
+
+        // Create mock tabs for testing
+        const mockTabs = [
+          {
+            title: "Google",
+            url: "https://www.google.com",
+            favIconUrl: "https://www.google.com/favicon.ico",
+          },
+          {
+            title: "GitHub",
+            url: "https://github.com",
+            favIconUrl: "https://github.githubassets.com/favicons/favicon.svg",
+          },
+          {
+            title: "Stack Overflow",
+            url: "https://stackoverflow.com",
+            favIconUrl:
+              "https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico",
+          },
+        ];
+
+        const groupInfo = {
+          title: name,
+          color: "blue",
+        };
+
+        try {
+          await manager.saveGroup(name, mockTabs, groupInfo);
+          nameInput.value = "";
+          await loadSavedGroups();
+        } catch (error) {
+          console.error("Error in saveTestGroup:", error);
+        }
+      }
+
+      async function loadSavedGroups() {
+        try {
+          const groups = await manager.loadGroups();
+          renderSavedGroups(groups);
+        } catch (error) {
+          console.error("Error in loadSavedGroups:", error);
+        }
+      }
+
+      async function deleteGroup(groupId) {
+        if (confirm("Are you sure you want to delete this group?")) {
+          try {
+            await manager.deleteGroup(groupId);
+            await loadSavedGroups();
+          } catch (error) {
+            console.error("Error in deleteGroup:", error);
+          }
+        }
+      }
+
+      async function restoreGroup(groupId, inNewWindow = false) {
+        try {
+          await manager.restoreGroup(groupId, inNewWindow);
+        } catch (error) {
+          console.error("Error in restoreGroup:", error);
+        }
+      }
+
+      async function clearAllGroups() {
+        if (confirm("Are you sure you want to clear all saved groups?")) {
+          try {
+            await manager.clearAllGroups();
+            await loadSavedGroups();
+          } catch (error) {
+            console.error("Error in clearAllGroups:", error);
+          }
+        }
+      }
+
+      // Load groups on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        loadSavedGroups();
+      });
+    </script>
+  </body>
+</html>

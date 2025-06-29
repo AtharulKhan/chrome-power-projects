@@ -1,0 +1,122 @@
+/* Sleek, minimal Arc-style floating search bar */
+
+body {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  min-width: 360px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#floating-bar {
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(60, 60, 90, 0.18), 0 1.5px 6px rgba(0, 0, 0, 0.07);
+  max-width: 520px;
+  min-width: 340px;
+  width: 100%;
+  padding: 18px 28px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(180, 185, 210, 0.18);
+  position: relative;
+  z-index: 10;
+}
+
+#options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  color: #222;
+  background: #f5f6fa;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.option:hover,
+.option input:focus + span {
+  background: #e6e8f0;
+}
+
+.option input[type="checkbox"] {
+  accent-color: #5a6cff;
+  margin-right: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: none;
+  outline: none;
+}
+
+#search-input {
+  font-size: 18px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e0e3ea;
+  background: #f8fafd;
+  outline: none;
+  margin-bottom: 14px;
+  transition: border 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 2px rgba(60, 60, 90, 0.04);
+}
+
+#search-input:focus {
+  border: 1.5px solid #5a6cff;
+  box-shadow: 0 2px 8px rgba(90, 108, 255, 0.07);
+}
+
+#results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+#results li {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 15px;
+  color: #222;
+  background: #f5f6fa;
+  cursor: pointer;
+  transition: background 0.13s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#results li:hover,
+#results li:focus {
+  background: #e6e8f0;
+}
+
+#results .result-type {
+  font-size: 12px;
+  color: #7a7e8c;
+  background: #e0e3ea;
+  border-radius: 6px;
+  padding: 2px 7px;
+  margin-right: 6px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}

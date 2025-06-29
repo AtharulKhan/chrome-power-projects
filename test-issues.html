@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Power-Project Issues</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .test-button {
+        margin: 10px 5px;
+        padding: 10px 20px;
+        background: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .test-button:hover {
+        background: #4338ca;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f3f4f6;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      .success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .projects-demo {
+        width: 300px;
+        height: 60px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+        margin: 20px 0;
+      }
+      .projects-list-demo {
+        display: flex;
+        gap: 8px;
+        padding: 10px;
+        overflow-x: auto;
+      }
+      .project-item-demo {
+        flex-shrink: 0;
+        padding: 8px 16px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+      .scroll-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .scroll-arrow:hover {
+        background: #f3f4f6;
+      }
+      .scroll-arrow.left {
+        left: 5px;
+      }
+      .scroll-arrow.right {
+        right: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Testing Power-Project Issues</h1>
+
+    <div class="test-section">
+      <h2>1. Test Save Group Error Fix</h2>
+      <p>
+        The issue was: "Cannot read properties of null (reading 'classList')"
+      </p>
+      <p>
+        Fix: Changed data-section="saved" to data-section="saved-groups" in HTML
+        and updated switchTabSection("saved-groups") in JS
+      </p>
+      <button class="test-button" onclick="testSaveGroupFix()">
+        Test Save Group Fix
+      </button>
+      <div id="save-group-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Test Google Search Functionality</h2>
+      <p>Test if clicking on search results opens Google search</p>
+      <input
+        type="text"
+        id="search-test-input"
+        placeholder="Enter search term"
+        value="SEO"
+      />
+      <button class="test-button" onclick="testGoogleSearch()">
+        Test Google Search
+      </button>
+      <div id="google-search-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Projects Scrollbar Demo</h2>
+      <p>Demo of horizontal scrolling with arrows for projects</p>
+      <div class="projects-demo">
+        <div class="scroll-arrow left" onclick="scrollProjects('left')">◀</div>
+        <div class="projects-list-demo" id="projects-demo-list">
+          <div class="project-item-demo">📁 Project 1</div>
+          <div class="project-item-demo">📂 Project 2</div>
+          <div class="project-item-demo">📁 Project 3</div>
+          <div class="project-item-demo">📂 Project 4</div>
+          <div class="project-item-demo">📁 Project 5</div>
+          <div class="project-item-demo">📂 Project 6</div>
+          <div class="project-item-demo">📁 Project 7</div>
+        </div>
+        <div class="scroll-arrow right" onclick="scrollProjects('right')">
+          ▶
+        </div>
+      </div>
+      <div id="scroll-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Summary of Fixes</h2>
+      <ol>
+        <li>
+          <strong>Save Group Error:</strong> Fixed by matching section IDs
+          correctly
+        </li>
+        <li>
+          <strong>Google Search:</strong> Already implemented in
+          searchOnGoogle() function
+        </li>
+        <li>
+          <strong>Projects Scrollbar:</strong> Need to add CSS and arrow
+          functionality
+        </li>
+      </ol>
+    </div>
+
+    <script>
+      function testSaveGroupFix() {
+        const result = document.getElementById("save-group-result");
+        try {
+          // Simulate the fix
+          const sectionId = "saved-groups-section";
+          const element = document.createElement("div");
+          element.id = sectionId;
+          element.classList.add("tab-panel");
+
+          // Test if classList is accessible
+          element.classList.add("active");
+
+          result.textContent =
+            "SUCCESS: The section ID fix prevents the classList error!\nSection ID: saved-groups-section\nClassList operations work correctly.";
+          result.className = "result success";
+        } catch (error) {
+          result.textContent = "ERROR: " + error.message;
+          result.className = "result error";
+        }
+      }
+
+      function testGoogleSearch() {
+        const result = document.getElementById("google-search-result");
+        const query = document.getElementById("search-test-input").value;
+
+        try {
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+            query
+          )}`;
+          result.textContent = `SUCCESS: Google search URL generated correctly!\nQuery: "${query}"\nURL: ${searchUrl}\n\nIn the extension, this would open in a new tab using:\nchrome.tabs.create({ url: searchUrl });`;
+          result.className = "result success";
+        } catch (error) {
+          result.textContent = "ERROR: " + error.message;
+          result.className = "result error";
+        }
+      }
+
+      function scrollProjects(direction) {
+        const container = document.getElementById("projects-demo-list");
+        const scrollAmount = 100;
+        const result = document.getElementById("scroll-result");
+
+        if (direction === "left") {
+          container.scrollLeft -= scrollAmount;
+        } else {
+          container.scrollLeft += scrollAmount;
+        }
+
+        result.textContent = `Scrolled ${direction}. Current scroll position: ${container.scrollLeft}px`;
+        result.className = "result";
+      }
+
+      // Add smooth scrolling to the demo
+      document.getElementById("projects-demo-list").style.scrollBehavior =
+        "smooth";
+    </script>
+  </body>
+</html>

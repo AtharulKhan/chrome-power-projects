@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saved Groups Debug</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .debug-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f0f0f0;
+        border-radius: 6px;
+      }
+
+      .debug-output {
+        font-family: monospace;
+        font-size: 12px;
+        background: #333;
+        color: #0f0;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      button {
+        padding: 8px 16px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Saved Groups Debug Tool</h1>
+
+      <div class="debug-section">
+        <h3>Current Storage State</h3>
+        <button onclick="checkStorage()">Check Chrome Storage</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <div id="storage-output" class="debug-output"></div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Test Save Operation</h3>
+        <button onclick="testSave()">Test Save Group</button>
+        <div id="save-output" class="debug-output"></div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Test Load Operation</h3>
+        <button onclick="testLoad()">Test Load Groups</button>
+        <div id="load-output" class="debug-output"></div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Direct Storage Access</h3>
+        <button onclick="directRead()">Direct Read</button>
+        <button onclick="directWrite()">Direct Write Test</button>
+        <div id="direct-output" class="debug-output"></div>
+      </div>
+    </div>
+
+    <script>
+      function log(elementId, message) {
+        const element = document.getElementById(elementId);
+        const timestamp = new Date().toLocaleTimeString();
+        element.textContent += `[${timestamp}] ${message}\n`;
+      }
+
+      async function checkStorage() {
+        const output = document.getElementById("storage-output");
+        output.textContent = "";
+
+        try {
+          // Check all storage
+          const allData = await chrome.storage.local.get(null);
+          log("storage-output", "All Chrome Storage Data:");
+          log("storage-output", JSON.stringify(allData, null, 2));
+
+          // Specifically check savedGroups
+          const savedGroupsData = await chrome.storage.local.get("savedGroups");
+          log("storage-output", "\nSaved Groups Data:");
+          log("storage-output", JSON.stringify(savedGroupsData, null, 2));
+
+          // Check storage quota
+          const quota = await navigator.storage.estimate();
+          log(
+            "storage-output",
+            `\nStorage Quota: ${quota.usage} / ${quota.quota} bytes`
+          );
+        } catch (error) {
+          log("storage-output", `ERROR: ${error.message}`);
+        }
+      }
+
+      async function clearStorage() {
+        const output = document.getElementById("storage-output");
+        output.textContent = "";
+
+        try {
+          await chrome.storage.local.clear();
+          log("storage-output", "Storage cleared successfully!");
+        } catch (error) {
+          log("storage-output", `ERROR clearing storage: ${error.message}`);
+        }
+      }
+
+      async function testSave() {
+        const output = document.getElementById("save-output");
+        output.textContent = "";
+
+        try {
+          // Create test data
+          const testGroup = {
+            id: Date.now().toString(),
+            name: "Test Group " + new Date().toLocaleString(),
+            color: "blue",
+            tabs: [
+              {
+                title: "Test Tab 1",
+                url: "https://example.com/1",
+                favIconUrl: "https://example.com/favicon.ico",
+              },
+              {
+                title: "Test Tab 2",
+                url: "https://example.com/2",
+                favIconUrl: "https://example.com/favicon.ico",
+              },
+            ],
+            createdAt: new Date().toISOString(),
+          };
+
+          log("save-output", "Creating test group:");
+          log("save-output", JSON.stringify(testGroup, null, 2));
+
+          // Load existing groups
+          const result = await chrome.storage.local.get("savedGroups");
+          const savedGroups = result.savedGroups || [];
+          log("save-output", `\nExisting groups count: ${savedGroups.length}`);
+
+          // Add new group
+          savedGroups.push(testGroup);
+
+          // Save back
+          await chrome.storage.local.set({ savedGroups: savedGroups });
+          log("save-output", "\nGroup saved successfully!");
+
+          // Verify save
+          const verifyResult = await chrome.storage.local.get("savedGroups");
+          log(
+            "save-output",
+            `\nVerification - Total groups: ${
+              verifyResult.savedGroups?.length || 0
+            }`
+          );
+        } catch (error) {
+          log("save-output", `ERROR: ${error.message}`);
+          log("save-output", error.stack);
+        }
+      }
+
+      async function testLoad() {
+        const output = document.getElementById("load-output");
+        output.textContent = "";
+
+        try {
+          log("load-output", "Loading saved groups...");
+
+          const result = await chrome.storage.local.get("savedGroups");
+          const savedGroups = result.savedGroups || [];
+
+          log("load-output", `Found ${savedGroups.length} saved groups`);
+
+          if (savedGroups.length > 0) {
+            log("load-output", "\nGroups:");
+            savedGroups.forEach((group, index) => {
+              log("load-output", `\n[${index + 1}] ${group.name}`);
+              log("load-output", `  ID: ${group.id}`);
+              log("load-output", `  Tabs: ${group.tabs.length}`);
+              log("load-output", `  Created: ${group.createdAt}`);
+            });
+          } else {
+            log("load-output", "\nNo saved groups found!");
+          }
+        } catch (error) {
+          log("load-output", `ERROR: ${error.message}`);
+        }
+      }
+
+      async function directRead() {
+        const output = document.getElementById("direct-output");
+        output.textContent = "";
+
+        try {
+          log("direct-output", "Direct read from chrome.storage.local...");
+
+          chrome.storage.local.get("savedGroups", (result) => {
+            if (chrome.runtime.lastError) {
+              log(
+                "direct-output",
+                `Chrome Runtime Error: ${chrome.runtime.lastError.message}`
+              );
+            } else {
+              log("direct-output", "Direct read result:");
+              log("direct-output", JSON.stringify(result, null, 2));
+            }
+          });
+        } catch (error) {
+          log("direct-output", `ERROR: ${error.message}`);
+        }
+      }
+
+      async function directWrite() {
+        const output = document.getElementById("direct-output");
+        output.textContent = "";
+
+        try {
+          const testData = {
+            savedGroups: [
+              {
+                id: "direct-test-" + Date.now(),
+                name: "Direct Write Test",
+                tabs: [],
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          };
+
+          log("direct-output", "Writing test data directly...");
+          log("direct-output", JSON.stringify(testData, null, 2));
+
+          chrome.storage.local.set(testData, () => {
+            if (chrome.runtime.lastError) {
+              log(
+                "direct-output",
+                `\nChrome Runtime Error: ${chrome.runtime.lastError.message}`
+              );
+            } else {
+              log("direct-output", "\nDirect write successful!");
+
+              // Verify
+              chrome.storage.local.get("savedGroups", (result) => {
+                log("direct-output", "\nVerification read:");
+                log("direct-output", JSON.stringify(result, null, 2));
+              });
+            }
+          });
+        } catch (error) {
+          log("direct-output", `ERROR: ${error.message}`);
+        }
+      }
+
+      // Run initial check on load
+      window.addEventListener("DOMContentLoaded", () => {
+        checkStorage();
+      });
+    </script>
+  </body>
+</html>
