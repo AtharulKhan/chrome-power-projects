@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Export/Import Button Locations</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f0f0f0;
+      }
+      .demo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .highlight {
+        background: #ffeb3b;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .button-demo {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        background: #4285f4;
+        color: white;
+        border-radius: 4px;
+        margin: 5px;
+      }
+      .icon {
+        width: 16px;
+        height: 16px;
+      }
+      .screenshot {
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        background: #f5f5f5;
+        margin: 10px 0;
+      }
+      .arrow {
+        color: #ff5722;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      .warning {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>🎯 Where to Find Export/Import Buttons</h1>
+
+      <div class="demo-section">
+        <h2>📍 Location 1: Settings Modal</h2>
+        <div class="screenshot">
+          <p>
+            <strong>Step 1:</strong> Look at the
+            <span class="highlight">header</span> of the Power Project sidebar
+          </p>
+          <p>
+            <strong>Step 2:</strong> Click the
+            <span class="highlight">⚙️ Settings</span> button (rightmost icon in
+            header)
+          </p>
+          <p>
+            <strong>Step 3:</strong> In the Settings modal that opens, you'll
+            see:
+          </p>
+          <div style="margin-left: 30px">
+            <div class="button-demo">
+              <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+                />
+              </svg>
+              Export Backup
+            </div>
+            <div class="button-demo" style="background: #6c757d">
+              <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 9V9.5L16 12l-3 2.5V13H9v-2h4z"
+                />
+              </svg>
+              Import Backup
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>📍 Location 2: Project Manager Modal</h2>
+        <div class="screenshot">
+          <p>
+            <strong>Step 1:</strong> Look at the
+            <span class="highlight">bottom</span> of the sidebar for the
+            "Projects" bar
+          </p>
+          <p>
+            <strong>Step 2:</strong> Click the
+            <span class="highlight">⚙️ Manage Projects</span> button
+          </p>
+          <p>
+            <strong>Step 3:</strong> In the Project Manager modal header, next
+            to the search bar, you'll see:
+          </p>
+          <div style="margin-left: 30px">
+            <span>Two icon buttons:</span>
+            <ul>
+              <li>📥 Import Backup button</li>
+              <li>📄 Export Backup button</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="warning">
+        <h3>⚠️ Important: Reload the Extension</h3>
+        <p>If you don't see these buttons:</p>
+        <ol>
+          <li>Go to <code>chrome://extensions/</code></li>
+          <li>Find "Power-Project" extension</li>
+          <li>Click the refresh/reload icon on the extension card</li>
+          <li>Open the extension again</li>
+        </ol>
+      </div>
+
+      <div class="demo-section">
+        <h2>🔄 About Chrome Sync</h2>
+        <p>
+          Chrome Sync is <strong>already working</strong> in your extension!
+          Here's what you need to know:
+        </p>
+        <ul>
+          <li>✅ Data is stored using <code>chrome.storage.sync</code></li>
+          <li>✅ It uses your Google account that's signed into Chrome</li>
+          <li>✅ No separate email setup needed</li>
+          <li>
+            ✅ Data syncs automatically when you sign into Chrome on another
+            device
+          </li>
+        </ul>
+
+        <h3>To Enable Sync:</h3>
+        <ol>
+          <li>Open Chrome Settings: <code>chrome://settings/</code></li>
+          <li>Click "You and Google" → "Sync and Google services"</li>
+          <li>Turn on Sync</li>
+          <li>Make sure "Extensions" is checked in sync settings</li>
+        </ol>
+      </div>
+
+      <div class="demo-section">
+        <h2>📋 What Gets Exported/Imported?</h2>
+        <p>The backup file includes <strong>BOTH</strong>:</p>
+        <ul>
+          <li>✅ All your Projects</li>
+          <li>✅ All your Saved Groups</li>
+        </ul>
+        <p>File format: <code>power-project-backup-YYYY-MM-DD.json</code></p>
+      </div>
+
+      <div class="demo-section" style="background: #e8f5e9">
+        <h2>✅ Quick Checklist</h2>
+        <ol>
+          <li>Reload the extension at <code>chrome://extensions/</code></li>
+          <li>Open the extension sidebar</li>
+          <li>Click Settings icon (⚙️) in the header</li>
+          <li>Look for Export/Import buttons in the modal</li>
+        </ol>
+      </div>
+    </div>
+  </body>
+</html>

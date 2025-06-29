@@ -163,27 +163,32 @@ class PowerProjectSidebar {
       this.createNewGroup();
     });
 
-    // Settings dropdown functionality
+    // Settings functionality
+    document.getElementById("settings-btn").addEventListener("click", () => {
+      this.openSettingsModal();
+    });
+
     document
-      .getElementById("settings-dropdown-btn")
-      .addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.toggleSettingsDropdown();
+      .getElementById("close-settings-modal")
+      .addEventListener("click", () => {
+        this.closeSettingsModal();
       });
 
-    // Settings export/import via dropdown
-    document.getElementById("export-data-btn").addEventListener("click", () => {
-      this.exportAllData();
-      this.hideSettingsDropdown();
-    });
-
-    document.getElementById("import-data-btn").addEventListener("click", () => {
-      document.getElementById("import-data-file").click();
-      this.hideSettingsDropdown();
-    });
+    // Settings export/import
+    document
+      .getElementById("settings-export-backup")
+      .addEventListener("click", () => {
+        this.exportAllData();
+      });
 
     document
-      .getElementById("import-data-file")
+      .getElementById("settings-import-backup")
+      .addEventListener("click", () => {
+        document.getElementById("settings-import-file").click();
+      });
+
+    document
+      .getElementById("settings-import-file")
       .addEventListener("change", (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -191,13 +196,6 @@ class PowerProjectSidebar {
           e.target.value = ""; // Reset file input
         }
       });
-
-    // Close dropdown when clicking outside
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".settings-dropdown-container")) {
-        this.hideSettingsDropdown();
-      }
-    });
 
     // Backup functionality in projects modal
     document
@@ -2521,19 +2519,13 @@ class PowerProjectSidebar {
     chrome.tabs.create({ url: searchUrl });
   }
 
-  // Settings Dropdown Methods
-  toggleSettingsDropdown() {
-    const dropdown = document.getElementById("settings-dropdown");
-    if (dropdown.style.display === "none" || !dropdown.style.display) {
-      dropdown.style.display = "block";
-    } else {
-      dropdown.style.display = "none";
-    }
+  // Settings Modal Methods
+  openSettingsModal() {
+    document.getElementById("settings-modal").style.display = "flex";
   }
 
-  hideSettingsDropdown() {
-    const dropdown = document.getElementById("settings-dropdown");
-    dropdown.style.display = "none";
+  closeSettingsModal() {
+    document.getElementById("settings-modal").style.display = "none";
   }
 
   // Toggle Project Search

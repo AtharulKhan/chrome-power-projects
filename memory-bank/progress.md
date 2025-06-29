@@ -12,7 +12,9 @@
 - **Saved Groups**:
   - FIXED: Save group functionality now works properly
   - Restore groups in current or new window
-  - Export/import saved groups as JSON
+- **Data Management**:
+  - Unified import/export for both projects and saved groups.
+  - Data syncs across devices using `chrome.storage.sync`.
 - **UI/UX**:
   - Beautiful gradient-based design with animations
   - Tab navigation between Groups, Tabs, and Saved Groups
@@ -63,7 +65,13 @@
    - Opens Google search in new tab with query
 
 3. **Improved Projects Bar**:
+
    - Reduced padding and heights for minimal look
    - Smaller, more subtle styling
    - Icon buttons instead of action buttons
    - More compact project items
+
+4. **Unified Import/Export**:
+   - Implemented a single import/export system for all user data (projects and saved groups).
+   - Added UI controls to the project management modal.
+   - This provides a comprehensive backup and restore solution.

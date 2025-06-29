@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Export/Import Dropdown</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 30px;
+      }
+      .test-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+      }
+      .test-section h2 {
+        color: #555;
+        margin-bottom: 15px;
+      }
+      .status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .instructions {
+        background: #e8f4f8;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4caf50;
+      }
+      .instructions h3 {
+        margin-top: 0;
+        color: #2196f3;
+      }
+      .instructions ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .instructions li {
+        margin-bottom: 8px;
+      }
+      code {
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      .feature-list {
+        list-style: none;
+        padding: 0;
+      }
+      .feature-list li {
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #e3f2fd;
+        border-radius: 4px;
+        border-left: 4px solid #2196f3;
+      }
+      .visual-guide {
+        background: #fff3e0;
+        padding: 20px;
+        border-radius: 4px;
+        margin: 20px 0;
+        border: 1px solid #ffe0b2;
+      }
+      .visual-guide h3 {
+        color: #ff6f00;
+        margin-top: 0;
+      }
+      .button-demo {
+        display: inline-block;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border-radius: 6px;
+        text-decoration: none;
+        margin: 10px 5px;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Export/Import Dropdown Test</h1>
+
+      <div class="instructions">
+        <h3>✨ What's New</h3>
+        <p>
+          The settings modal has been replaced with a sleek dropdown menu for
+          quick access to export and import functionality.
+        </p>
+      </div>
+
+      <div class="test-section">
+        <h2>📋 New Features</h2>
+        <ul class="feature-list">
+          <li>✅ Settings icon now opens a dropdown menu instead of a modal</li>
+          <li>✅ Export Data button - exports all projects and saved groups</li>
+          <li>✅ Import Data button - imports backup JSON files</li>
+          <li>✅ Click outside the dropdown to close it</li>
+          <li>✅ Smooth animations and modern styling</li>
+        </ul>
+      </div>
+
+      <div class="visual-guide">
+        <h3>👀 Visual Guide</h3>
+        <p>
+          <strong>Before:</strong> Clicking settings icon → Opens modal window
+        </p>
+        <p>
+          <strong>Now:</strong> Clicking settings icon → Opens compact dropdown
+          menu
+        </p>
+        <p>
+          The dropdown appears right below the settings icon with two options:
+        </p>
+        <ul>
+          <li>📥 Export Data - Downloads a JSON backup file</li>
+          <li>📤 Import Data - Opens file picker to restore from backup</li>
+        </ul>
+      </div>
+
+      <div class="test-section">
+        <h2>🧪 How to Test</h2>
+        <ol>
+          <li>Open the Power-Project extension sidebar</li>
+          <li>Look for the settings icon (gear) in the top-right header</li>
+          <li>Click the settings icon - a dropdown should appear</li>
+          <li>
+            You'll see two options:
+            <ul>
+              <li><strong>Export Data</strong> - Click to download backup</li>
+              <li>
+                <strong>Import Data</strong> - Click to select a backup file
+              </li>
+            </ul>
+          </li>
+          <li>Click anywhere outside the dropdown to close it</li>
+        </ol>
+      </div>
+
+      <div class="test-section">
+        <h2>✨ Implementation Details</h2>
+        <p>The following changes were made:</p>
+        <ul>
+          <li>
+            <code>sidebar.html</code> - Removed modal, added dropdown structure
+          </li>
+          <li>
+            <code>sidebar.css</code> - Added dropdown styling with animations
+          </li>
+          <li>
+            <code>sidebar.js</code> - Updated event handlers for dropdown
+            functionality
+          </li>
+        </ul>
+      </div>
+
+      <div class="status success">
+        ✅ <strong>Status:</strong> Export/Import dropdown functionality has
+        been successfully implemented!
+      </div>
+
+      <div class="test-section">
+        <h2>🎨 Styling Features</h2>
+        <ul>
+          <li>Gradient background matching the extension's theme</li>
+          <li>Smooth fade-in animation when opening</li>
+          <li>Hover effects on menu items</li>
+          <li>Icons for visual clarity</li>
+          <li>Responsive design that works in the sidebar</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

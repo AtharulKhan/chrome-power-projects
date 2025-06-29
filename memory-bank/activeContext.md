@@ -1,71 +1,34 @@
 # Active Context
 
-## Current Work Focus
+## Current Focus: Export/Import Functionality Error Fix
 
-Just completed implementing major new features for the Power Project Chrome Extension:
+### Issue
 
-1. **Saved Groups Search Functionality** ✅
+The sidebar.js has JavaScript errors because it references HTML elements that no longer exist:
 
-   - Added search input to Saved Groups tab header
-   - Dynamic real-time filtering as user types
-   - Searches both group names and tab titles/URLs
-   - Shows "No saved groups match your search" when no results
-   - Search query stored in savedGroupsSearchQuery property
+- Line 514 tries to access "export-groups" element (doesn't exist)
+- Several other references to removed elements causing null errors
+- Settings modal and export/import functionality is implemented but JavaScript has outdated references
 
-2. **Projects Search Functionality** ✅
+### Recent Changes
 
-   - Added toggleable search to Projects bar (click search icon)
-   - Dynamic real-time filtering of project names
-   - Shows "No matching projects" when no results
-   - Search visibility toggled with projectsSearchVisible flag
-   - Search query stored in projectsSearchQuery property
+1. Added Settings modal with export/import buttons to sidebar.html
+2. Added export/import icons to Projects Manager modal
+3. JavaScript still has references to old elements that were removed
 
-3. **Chrome Storage Sync Migration** ✅
+### Solution in Progress
 
-   - Converted ALL chrome.storage.local calls to chrome.storage.sync
-   - Extension data now syncs across all devices where user is signed in
-   - Data tied to user's Google account
-   - Affects: saved groups, projects, and all other stored data
-   - Sync happens automatically when user signs into Chrome
+Need to remove the old event listener references and ensure JavaScript matches current HTML structure. The export/import functionality is already implemented in the exportAllData() and importAllData() methods.
 
-4. **Pinned Tabs Protection** ✅
-   - Added HARD RULE: Never touch pinned tabs
-   - groupTabsByDomain() now excludes pinned tabs
-   - createNewGroup() shows alert if user tries to group a pinned tab
-   - Pinned tabs remain independent and protected from grouping operations
+### Key Implementation Details
 
-## Recent Changes
+- Settings button (⚙️) in header opens modal with export/import
+- Project Manager has export/import icons in header
+- Both use the same exportAllData() and importAllData() methods
+- Edge browser compatible using chrome.storage.sync API
 
-- Updated sidebar.js with search functionality for both saved groups and projects
-- Migrated all storage from local to sync storage
-- Added pinned tabs protection to grouping functions
-- Enhanced UI with dynamic search inputs
-- Created comprehensive test files for all features
+### Next Steps
 
-## Next Steps
-
-- Test sync functionality across multiple devices
-- Monitor storage quota usage (sync has smaller limits than local)
-- Consider adding export/import as backup for sync data
-
-## Active Decisions and Considerations
-
-- Used chrome.storage.sync for automatic cross-device syncing
-- Search is case-insensitive and searches multiple fields
-- Pinned tabs are completely excluded from grouping operations
-- Projects search is toggleable to save space
-
-## Important Patterns and Preferences
-
-- Real-time search filtering using input event listeners
-- Storage operations use async/await pattern consistently
-- UI state preserved during refreshes (collapsed states, search queries)
-- Clear user feedback for all operations
-
-## Learnings and Project Insights
-
-- Chrome sync storage has 100KB total quota (vs 5MB for local)
-- Sync storage automatically handles conflict resolution
-- Pinned tabs should never be programmatically grouped
-- Dynamic search improves usability for large collections
-- Toggle patterns work well for optional UI elements
+1. Clean up JavaScript to remove references to non-existent elements
+2. Test export/import functionality after reload
+3. Verify Edge browser sync functionality

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Export/Import Functionality</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h1,
+      h2 {
+        color: #333;
+      }
+      button {
+        background: #4285f4;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #357abd;
+      }
+      .status {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+        background: #e8f0fe;
+      }
+      .error {
+        background: #fce8e6;
+        color: #d33;
+      }
+      .success {
+        background: #e6f4ea;
+        color: #137333;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+      .data-preview {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test Export/Import & Chrome Sync</h1>
+
+    <div class="section">
+      <h2>1. Current Data Status</h2>
+      <button onclick="checkCurrentData()">Check Current Data</button>
+      <div id="current-data-status" class="status"></div>
+      <div id="current-data-preview" class="data-preview"></div>
+    </div>
+
+    <div class="section">
+      <h2>2. Export All Data (Projects + Saved Groups)</h2>
+      <button onclick="exportAllData()">Export All Data to File</button>
+      <div id="export-status" class="status"></div>
+    </div>
+
+    <div class="section">
+      <h2>3. Import All Data</h2>
+      <input
+        type="file"
+        id="import-file"
+        accept=".json"
+        style="margin: 10px 0"
+      />
+      <button onclick="importAllData()">Import from File</button>
+      <div id="import-status" class="status"></div>
+    </div>
+
+    <div class="section">
+      <h2>4. Chrome Sync Status</h2>
+      <button onclick="checkSyncStatus()">Check Sync Status</button>
+      <div id="sync-status" class="status"></div>
+      <p>
+        <small
+          >Note: Chrome sync uses your Google account that's signed into Chrome,
+          not a separate email.</small
+        >
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>5. Test Data Creation</h2>
+      <button onclick="createTestData()">
+        Create Test Project & Saved Group
+      </button>
+      <div id="test-data-status" class="status"></div>
+    </div>
+
+    <script>
+      async function checkCurrentData() {
+        const statusDiv = document.getElementById("current-data-status");
+        const previewDiv = document.getElementById("current-data-preview");
+
+        try {
+          // Check sync storage
+          const syncData = await chrome.storage.sync.get(null);
+          const projects = syncData.projects || [];
+          const savedGroups = syncData.savedGroups || [];
+
+          statusDiv.innerHTML = `
+                    <strong>Data in Chrome Sync Storage:</strong><br>
+                    Projects: ${projects.length}<br>
+                    Saved Groups: ${savedGroups.length}<br>
+                    Total storage used: ${JSON.stringify(syncData).length} bytes
+                `;
+          statusDiv.className = "status success";
+
+          previewDiv.innerHTML = `<pre>${JSON.stringify(
+            { projects, savedGroups },
+            null,
+            2
+          )}</pre>`;
+
+          // Also check local storage for comparison
+          const localData = await chrome.storage.local.get(null);
+          if (Object.keys(localData).length > 0) {
+            statusDiv.innerHTML +=
+              "<br><br><strong>Warning:</strong> Found data in local storage. This should be migrated to sync storage.";
+          }
+        } catch (error) {
+          statusDiv.innerHTML = `Error: ${error.message}`;
+          statusDiv.className = "status error";
+        }
+      }
+
+      async function exportAllData() {
+        const statusDiv = document.getElementById("export-status");
+
+        try {
+          const data = await chrome.storage.sync.get([
+            "projects",
+            "savedGroups",
+          ]);
+          const exportData = {
+            projects: data.projects || [],
+            savedGroups: data.savedGroups || [],
+            exportDate: new Date().toISOString(),
+            version: "1.0",
+          };
+
+          const dataStr = JSON.stringify(exportData, null, 2);
+          const dataBlob = new Blob([dataStr], { type: "application/json" });
+          const url = URL.createObjectURL(dataBlob);
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `power-project-backup-${
+            new Date().toISOString().split("T")[0]
+          }.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          statusDiv.innerHTML = `Successfully exported ${exportData.projects.length} projects and ${exportData.savedGroups.length} saved groups!`;
+          statusDiv.className = "status success";
+        } catch (error) {
+          statusDiv.innerHTML = `Export Error: ${error.message}`;
+          statusDiv.className = "status error";
+        }
+      }
+
+      async function importAllData() {
+        const statusDiv = document.getElementById("import-status");
+        const fileInput = document.getElementById("import-file");
+
+        if (!fileInput.files[0]) {
+          statusDiv.innerHTML = "Please select a file first";
+          statusDiv.className = "status error";
+          return;
+        }
+
+        try {
+          const text = await fileInput.files[0].text();
+          const importData = JSON.parse(text);
+
+          if (!importData.projects || !importData.savedGroups) {
+            throw new Error("Invalid backup file format");
+          }
+
+          // Get existing data to avoid duplicates
+          const existing = await chrome.storage.sync.get([
+            "projects",
+            "savedGroups",
+          ]);
+          const existingProjects = existing.projects || [];
+          const existingSavedGroups = existing.savedGroups || [];
+
+          // Merge data avoiding duplicates
+          let newProjectsCount = 0;
+          let newGroupsCount = 0;
+
+          importData.projects.forEach((project) => {
+            if (!existingProjects.find((p) => p.id === project.id)) {
+              existingProjects.push(project);
+              newProjectsCount++;
+            }
+          });
+
+          importData.savedGroups.forEach((group) => {
+            if (!existingSavedGroups.find((g) => g.id === group.id)) {
+              existingSavedGroups.push(group);
+              newGroupsCount++;
+            }
+          });
+
+          // Save to sync storage
+          await chrome.storage.sync.set({
+            projects: existingProjects,
+            savedGroups: existingSavedGroups,
+          });
+
+          statusDiv.innerHTML = `Import successful!<br>
+                    Added ${newProjectsCount} new projects (${existingProjects.length} total)<br>
+                    Added ${newGroupsCount} new saved groups (${existingSavedGroups.length} total)`;
+          statusDiv.className = "status success";
+
+          // Refresh the current data display
+          checkCurrentData();
+        } catch (error) {
+          statusDiv.innerHTML = `Import Error: ${error.message}`;
+          statusDiv.className = "status error";
+        }
+      }
+
+      async function checkSyncStatus() {
+        const statusDiv = document.getElementById("sync-status");
+
+        try {
+          // Check if sync is available
+          const syncAvailable = chrome.storage.sync ? true : false;
+
+          // Get sync quota
+          const bytesInUse = await chrome.storage.sync.getBytesInUse();
+          const quotaBytes = chrome.storage.sync.QUOTA_BYTES || 102400; // 100KB
+          const percentUsed = ((bytesInUse / quotaBytes) * 100).toFixed(2);
+
+          // Check Chrome sign-in status (this requires identity permission)
+          let signInStatus = "Unable to check sign-in status";
+          try {
+            const userInfo = await chrome.identity.getProfileUserInfo();
+            if (userInfo && userInfo.email) {
+              signInStatus = `Signed in as: ${userInfo.email}`;
+            } else {
+              signInStatus = "Not signed into Chrome";
+            }
+          } catch (e) {
+            // Identity API might not be available
+          }
+
+          statusDiv.innerHTML = `
+                    <strong>Chrome Sync Status:</strong><br>
+                    Sync Available: ${syncAvailable ? "Yes" : "No"}<br>
+                    Storage Used: ${bytesInUse} / ${quotaBytes} bytes (${percentUsed}%)<br>
+                    ${signInStatus}<br><br>
+                    <strong>How Chrome Sync Works:</strong><br>
+                    1. Sign into Chrome with your Google account<br>
+                    2. Enable Chrome Sync in Chrome Settings<br>
+                    3. Data automatically syncs across all devices<br>
+                    4. No additional email setup needed - uses your Chrome account
+                `;
+          statusDiv.className = "status success";
+        } catch (error) {
+          statusDiv.innerHTML = `Sync Status Error: ${error.message}`;
+          statusDiv.className = "status error";
+        }
+      }
+
+      async function createTestData() {
+        const statusDiv = document.getElementById("test-data-status");
+
+        try {
+          // Get existing data
+          const existing = await chrome.storage.sync.get([
+            "projects",
+            "savedGroups",
+          ]);
+          const projects = existing.projects || [];
+          const savedGroups = existing.savedGroups || [];
+
+          // Create test project
+          const testProject = {
+            id: Date.now().toString(),
+            name: `Test Project ${new Date().toLocaleString()}`,
+            emoji: "🧪",
+            window: {
+              tabs: [
+                {
+                  url: "https://example.com",
+                  title: "Example Site",
+                  groupId: -1,
+                  pinned: false,
+                  index: 0,
+                },
+              ],
+              groups: [],
+            },
+            createdAt: new Date().toISOString(),
+          };
+
+          // Create test saved group
+          const testSavedGroup = {
+            id: (Date.now() + 1).toString(),
+            name: `Test Saved Group ${new Date().toLocaleString()}`,
+            color: "blue",
+            tabs: [
+              {
+                title: "Test Tab",
+                url: "https://test.com",
+                favIconUrl: "",
+                pinned: false,
+              },
+            ],
+            savedAt: new Date().toISOString(),
+            tabCount: 1,
+          };
+
+          projects.push(testProject);
+          savedGroups.push(testSavedGroup);
+
+          // Save to sync storage
+          await chrome.storage.sync.set({
+            projects: projects,
+            savedGroups: savedGroups,
+          });
+
+          statusDiv.innerHTML = `Test data created successfully!<br>
+                    Total projects: ${projects.length}<br>
+                    Total saved groups: ${savedGroups.length}`;
+          statusDiv.className = "status success";
+
+          // Refresh the current data display
+          checkCurrentData();
+        } catch (error) {
+          statusDiv.innerHTML = `Error creating test data: ${error.message}`;
+          statusDiv.className = "status error";
+        }
+      }
+
+      // Check data on load
+      window.addEventListener("load", () => {
+        checkCurrentData();
+        checkSyncStatus();
+      });
+    </script>
+  </body>
+</html>
