@@ -11,7 +11,7 @@ class SavedGroupsManager {
 
   async loadGroups() {
     try {
-      const result = await chrome.storage.sync.get("savedGroups");
+      const result = await chrome.storage.local.get("savedGroups");
       this.savedGroups = result.savedGroups || [];
       console.log("Loaded saved groups:", this.savedGroups.length);
       return this.savedGroups;
@@ -45,7 +45,7 @@ class SavedGroupsManager {
       this.savedGroups.unshift(savedGroup);
 
       // Save to storage
-      await chrome.storage.sync.set({ savedGroups: this.savedGroups });
+      await chrome.storage.local.set({ savedGroups: this.savedGroups });
 
       console.log("Group saved successfully:", savedGroup.name);
       return savedGroup;
@@ -58,7 +58,7 @@ class SavedGroupsManager {
   async deleteGroup(groupId) {
     try {
       this.savedGroups = this.savedGroups.filter((g) => g.id !== groupId);
-      await chrome.storage.sync.set({ savedGroups: this.savedGroups });
+      await chrome.storage.local.set({ savedGroups: this.savedGroups });
       console.log("Group deleted:", groupId);
       return true;
     } catch (error) {

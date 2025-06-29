@@ -13,6 +13,72 @@ chrome.action.onClicked.addListener(async (tab) => {
   await chrome.sidePanel.open({ windowId: tab.windowId });
 });
 
+// Handle keyboard shortcuts
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "toggle-sidebar") {
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab) {
+      // Toggle the sidebar panel
+      // Note: Chrome doesn't provide a way to check if sidebar is open,
+      // so we'll just call open which will bring it to focus if already open
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+    }
+  } else if (command === "focus-search") {
+    // First ensure sidebar is open
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab) {
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      // Small delay to ensure sidebar is loaded
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ type: "FOCUS_SEARCH" });
+      }, 100);
+    }
+  } else if (command === "suspend-all-tabs") {
+    // Suspend all inactive tabs in current window
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (activeTab) {
+      const tabs = await chrome.tabs.query({ windowId: activeTab.windowId });
+
+      for (const tab of tabs) {
+        if (
+          tab.id !== activeTab.id &&
+          !tab.pinned &&
+          !tab.audible &&
+          !tab.discarded &&
+          !tab.url.startsWith("chrome://") &&
+          !tab.url.startsWith("chrome-extension://")
+        ) {
+          await chrome.tabs.discard(tab.id);
+        }
+      }
+    }
+  } else if (command === "open-projects") {
+    // First ensure sidebar is open
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab) {
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      // Small delay to ensure sidebar is loaded
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ type: "OPEN_PROJECTS" });
+      }, 100);
+    }
+  }
+});
+
 // Enable the side panel on all tabs
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (!tab.url) return;

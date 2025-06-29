@@ -396,6 +396,51 @@ class PowerProjectSidebar {
       this.updateActiveTab();
     });
 
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      // Ctrl+K - Focus search bar
+      if (e.ctrlKey && e.key === "k") {
+        e.preventDefault();
+        document.getElementById("search-input").focus();
+      }
+
+      // Alt+K - Suspend all tabs
+      if (e.altKey && e.key === "k") {
+        e.preventDefault();
+        this.suspendInactiveTabs();
+      }
+
+      // Alt+P - Open projects modal
+      if (e.altKey && e.key === "p") {
+        e.preventDefault();
+        this.openProjectsManager();
+      }
+    });
+
+    // Listen for messages from background script (global keyboard shortcuts)
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === "FOCUS_SEARCH") {
+        document.getElementById("search-input").focus();
+      } else if (message.type === "OPEN_PROJECTS") {
+        this.openProjectsManager();
+      }
+    });
+
+    // Keyboard shortcuts modal
+    document
+      .getElementById("keyboard-shortcuts-btn")
+      .addEventListener("click", () => {
+        document.getElementById("keyboard-shortcuts-modal").style.display =
+          "flex";
+      });
+
+    document
+      .getElementById("close-keyboard-shortcuts-modal")
+      .addEventListener("click", () => {
+        document.getElementById("keyboard-shortcuts-modal").style.display =
+          "none";
+      });
+
     // Projects functionality
     document
       .getElementById("search-projects-btn")
@@ -849,6 +894,7 @@ class PowerProjectSidebar {
         <div class="tab-info">
           <div class="tab-title">${tab.title}</div>
           <div class="tab-url">${new URL(tab.url).hostname}</div>
+          ${isPinned ? '<div class="pinned-tag">PINNED</div>' : ""}
         </div>
         <div class="tab-actions">
           <button class="tab-action-btn" title="Add to Project">
@@ -874,11 +920,15 @@ class PowerProjectSidebar {
               </svg>
             </button>`
           }
-          <button class="tab-action-btn close" title="Close Tab">
+          ${
+            isPinned
+              ? ""
+              : `<button class="tab-action-btn close" title="Close Tab">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
-          </button>
+          </button>`
+          }
         </div>
       </div>
     `;
@@ -1271,7 +1321,7 @@ class PowerProjectSidebar {
         console.log("Loaded saved groups:", this.savedGroups.length);
       } else {
         // Fallback if manager not loaded yet
-        const result = await chrome.storage.sync.get("savedGroups");
+        const result = await chrome.storage.local.get("savedGroups");
         this.savedGroups = result.savedGroups || [];
       }
     } catch (error) {
@@ -1312,10 +1362,10 @@ class PowerProjectSidebar {
       };
 
       // Save directly to chrome storage
-      const result = await chrome.storage.sync.get("savedGroups");
+      const result = await chrome.storage.local.get("savedGroups");
       const savedGroups = result.savedGroups || [];
       savedGroups.unshift(savedGroup);
-      await chrome.storage.sync.set({ savedGroups: savedGroups });
+      await chrome.storage.local.set({ savedGroups: savedGroups });
 
       console.log(`Saved group "${name}" with ${tabs.length} tabs`);
 
@@ -1465,7 +1515,7 @@ class PowerProjectSidebar {
     if (!newName || newName === savedGroup.name) return;
 
     savedGroup.name = newName;
-    await chrome.storage.sync.set({ savedGroups: this.savedGroups });
+    await chrome.storage.local.set({ savedGroups: this.savedGroups });
     this.renderSavedGroups();
   }
 
@@ -1523,7 +1573,7 @@ class PowerProjectSidebar {
         this.savedGroups = this.savedGroups.filter(
           (g) => g.id !== savedGroupId
         );
-        await chrome.storage.sync.set({ savedGroups: this.savedGroups });
+        await chrome.storage.local.set({ savedGroups: this.savedGroups });
       }
       this.renderSavedGroups();
     }
@@ -1583,7 +1633,7 @@ class PowerProjectSidebar {
             this.savedGroups.push(group);
           }
         });
-        await chrome.storage.sync.set({ savedGroups: this.savedGroups });
+        await chrome.storage.local.set({ savedGroups: this.savedGroups });
         await this.loadSavedGroups();
         this.renderSavedGroups();
       }
@@ -1773,16 +1823,19 @@ class PowerProjectSidebar {
   // Projects functionality
   async loadProjects() {
     try {
-      const result = await chrome.storage.sync.get("projects");
+      const result = await chrome.storage.local.get("projects");
       this.projects = result.projects || [];
+      console.log("Loaded projects:", this.projects.length);
     } catch (error) {
       console.error("Error loading projects:", error);
+      this.projects = [];
     }
   }
 
   async saveProjects() {
     try {
-      await chrome.storage.sync.set({ projects: this.projects });
+      await chrome.storage.local.set({ projects: this.projects });
+      console.log("Saved projects:", this.projects.length);
     } catch (error) {
       console.error("Error saving projects:", error);
     }

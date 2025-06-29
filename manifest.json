@@ -41,5 +41,31 @@
     "32": "images/icon32.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
+  },
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Toggle the Power-Project sidebar"
+    },
+    "focus-search": {
+      "suggested_key": {
+        "default": "Ctrl+K"
+      },
+      "description": "Focus search bar"
+    },
+    "suspend-all-tabs": {
+      "suggested_key": {
+        "default": "Alt+K"
+      },
+      "description": "Suspend all inactive tabs"
+    },
+    "open-projects": {
+      "suggested_key": {
+        "default": "Alt+P"
+      },
+      "description": "Open projects manager"
+    }
   }
 }
