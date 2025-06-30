@@ -303,6 +303,8 @@ class PowerProjectSidebar {
           e.stopPropagation();
           if (button.title === "Add to Project") {
             this.addTabGroupToProject(groupId);
+          } else if (button.title === "Update in Project") {
+            this.showUpdateProjectModal(groupId);
           } else if (button.title === "Save Group") {
             this.saveCurrentGroupWithTags(groupId);
           } else if (button.title === "Close Group") {
@@ -871,6 +873,13 @@ class PowerProjectSidebar {
                     }" title="Add to Project">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2zM15 16h-2v-2H9v-2h4V10h2v2h4v2h-4v2z"/>
+                      </svg>
+                    </button>
+                    <button class="tab-action-btn" data-group-id="${
+                      group.id
+                    }" title="Update in Project">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79 2.73 2.71 7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58 3.51-3.47 9.14-3.47 12.65 0L21 3v7.12z"/>
                       </svg>
                     </button>
                     <button class="tab-action-btn" data-group-id="${
@@ -3898,6 +3907,307 @@ class PowerProjectSidebar {
     this.renderProjects();
     this.closeAddToProjectModal();
     alert("Project created successfully!");
+  }
+
+  // Update in Project functionality
+  showUpdateProjectModal(groupId) {
+    const group = this.groups.find((g) => g.id === groupId);
+    const tabs = this.tabs.filter((tab) => tab.groupId === groupId);
+
+    if (!group || tabs.length === 0) {
+      alert("Group not found or empty");
+      return;
+    }
+
+    if (this.projects.length === 0) {
+      alert("No projects found. Please create a project first.");
+      return;
+    }
+
+    // Store the group data for updating
+    this.pendingUpdateGroup = {
+      groupId: groupId,
+      groupName: group.title || "Unnamed Group",
+      tabs: tabs.map((tab) => ({
+        url: tab.url,
+        title: tab.title,
+        favIconUrl: tab.favIconUrl,
+        pinned: tab.pinned,
+        index: tab.index,
+      })),
+    };
+
+    // Create and show the update project modal
+    this.createUpdateProjectModal();
+  }
+
+  createUpdateProjectModal() {
+    // Remove existing modal if it exists
+    const existingModal = document.getElementById("update-project-modal");
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Create modal HTML
+    const modalHTML = `
+      <div class="modal-overlay" id="update-project-modal" style="display: flex;">
+        <div class="modal-content" style="width: 500px; max-height: 600px;">
+          <div class="modal-header">
+            <h3>Update Tab Group in Project</h3>
+            <button id="close-update-project-modal" class="close-btn">×</button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px;">
+              <div style="font-weight: 600; color: #0369a1; margin-bottom: 4px;">Group to Update:</div>
+              <div style="color: #075985; font-size: 14px;">${
+                this.pendingUpdateGroup.groupName
+              } (${this.pendingUpdateGroup.tabs.length} tabs)</div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                Select Project to Update:
+              </label>
+              <input 
+                type="text" 
+                id="update-project-search" 
+                placeholder="Search projects..." 
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 12px;"
+              >
+              <div id="update-project-list" style="
+                max-height: 300px;
+                overflow-y: auto;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                background: white;
+              ">
+                ${this.renderProjectsForUpdate()}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="cancel-update-project" class="secondary-button">Cancel</button>
+            <button id="confirm-update-project" class="primary-button" disabled>Update Project</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add modal to DOM
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    // Set up event listeners
+    this.setupUpdateProjectModalListeners();
+  }
+
+  renderProjectsForUpdate(searchQuery = "") {
+    let filteredProjects = this.projects;
+    if (searchQuery) {
+      filteredProjects = this.projects.filter((project) =>
+        project.name.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    if (filteredProjects.length === 0) {
+      return `
+        <div style="padding: 20px; text-align: center; color: #6b7280; font-size: 13px;">
+          No projects found
+        </div>
+      `;
+    }
+
+    return filteredProjects
+      .map((project) => {
+        const priorityColors = {
+          "very-high": "#ef4444",
+          high: "#f97316",
+          medium: "#eab308",
+          low: "#9ca3af",
+        };
+        const priorityColor = priorityColors[project.priority || "medium"];
+
+        return `
+            <div class="update-project-item" data-project-id="${
+              project.id
+            }" style="
+              padding: 12px 16px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              transition: background 0.2s;
+              border-bottom: 1px solid #f3f4f6;
+            " onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <span class="project-priority-dot" style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: ${priorityColor};
+                flex-shrink: 0;
+              "></span>
+              <span style="font-size: 20px;">${project.emoji || "📁"}</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #111827; margin-bottom: 2px;">${this.escapeHtml(
+                  project.name
+                )}</div>
+                <div style="font-size: 12px; color: #6b7280;">
+                  ${project.window.tabs.length} tabs • ${
+          project.window.groups.length
+        } groups
+                </div>
+              </div>
+              <svg class="selected-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: none;">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#10b981"/>
+              </svg>
+            </div>
+          `;
+      })
+      .join("");
+  }
+
+  setupUpdateProjectModalListeners() {
+    const modal = document.getElementById("update-project-modal");
+    const searchInput = document.getElementById("update-project-search");
+    const projectList = document.getElementById("update-project-list");
+    const cancelBtn = document.getElementById("cancel-update-project");
+    const confirmBtn = document.getElementById("confirm-update-project");
+    const closeBtn = document.getElementById("close-update-project-modal");
+
+    let selectedProjectId = null;
+
+    // Search functionality
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase();
+      projectList.innerHTML = this.renderProjectsForUpdate(query);
+      selectedProjectId = null;
+      confirmBtn.disabled = true;
+      this.setupProjectSelection();
+    });
+
+    // Project selection
+    const setupProjectSelection = () => {
+      projectList.querySelectorAll(".update-project-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          // Remove previous selection
+          projectList.querySelectorAll(".update-project-item").forEach((el) => {
+            el.style.background = "";
+            el.querySelector(".selected-icon").style.display = "none";
+          });
+
+          // Mark as selected
+          item.style.background = "#ecfdf5";
+          item.querySelector(".selected-icon").style.display = "block";
+          selectedProjectId = item.dataset.projectId;
+          confirmBtn.disabled = false;
+        });
+      });
+    };
+
+    this.setupProjectSelection = setupProjectSelection;
+    setupProjectSelection();
+
+    // Cancel/Close
+    cancelBtn.addEventListener("click", () => {
+      modal.remove();
+      this.pendingUpdateGroup = null;
+    });
+
+    closeBtn.addEventListener("click", () => {
+      modal.remove();
+      this.pendingUpdateGroup = null;
+    });
+
+    // Confirm update
+    confirmBtn.addEventListener("click", async () => {
+      if (selectedProjectId && this.pendingUpdateGroup) {
+        await this.updateTabGroupInProject(selectedProjectId);
+        modal.remove();
+        this.pendingUpdateGroup = null;
+      }
+    });
+
+    // Close modal when clicking outside
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        this.pendingUpdateGroup = null;
+      }
+    });
+  }
+
+  async updateTabGroupInProject(projectId) {
+    try {
+      const project = this.projects.find((p) => p.id === projectId);
+      if (!project || !this.pendingUpdateGroup) {
+        alert("Project not found or no group data");
+        return;
+      }
+
+      const groupName = this.pendingUpdateGroup.groupName;
+      const newTabs = this.pendingUpdateGroup.tabs;
+
+      // Find existing group with the same name in the project
+      const existingGroupIndex = project.window.groups.findIndex(
+        (group) => group.title === groupName
+      );
+
+      if (existingGroupIndex !== -1) {
+        // Update existing group
+        const existingGroup = project.window.groups[existingGroupIndex];
+        const existingGroupId = existingGroup.id;
+
+        // Remove all tabs that belong to this group
+        project.window.tabs = project.window.tabs.filter(
+          (tab) => tab.groupId !== existingGroupId
+        );
+
+        // Add new tabs with the same group ID
+        const updatedTabs = newTabs.map((tab) => ({
+          ...tab,
+          groupId: existingGroupId,
+        }));
+
+        project.window.tabs.push(...updatedTabs);
+
+        alert(
+          `Updated "${groupName}" in project "${project.name}" with ${newTabs.length} tabs`
+        );
+      } else {
+        // Create new group in project
+        const newGroupId = Date.now();
+        const currentGroup = this.groups.find(
+          (g) => g.id === this.pendingUpdateGroup.groupId
+        );
+
+        const newGroup = {
+          id: newGroupId,
+          title: groupName,
+          color: currentGroup?.color || "blue",
+          collapsed: false,
+        };
+
+        project.window.groups.push(newGroup);
+
+        // Add tabs with new group ID
+        const newTabsWithGroup = newTabs.map((tab) => ({
+          ...tab,
+          groupId: newGroupId,
+        }));
+
+        project.window.tabs.push(...newTabsWithGroup);
+
+        alert(
+          `Added new group "${groupName}" to project "${project.name}" with ${newTabs.length} tabs`
+        );
+      }
+
+      // Save the updated project
+      await this.saveProjects();
+      this.renderProjects();
+    } catch (error) {
+      console.error("Error updating tab group in project:", error);
+      alert("Error updating project: " + error.message);
+    }
   }
 
   // Selection mode methods (placeholder for now)
