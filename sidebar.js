@@ -67,6 +67,14 @@ class PowerProjectSidebar {
     this.updateTabCount();
     this.renderProjects();
     this.startAutoRefresh();
+
+    // Auto-focus the search input when sidebar opens
+    setTimeout(() => {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }, 100);
   }
 
   async loadTabs() {
@@ -1916,17 +1924,40 @@ class PowerProjectSidebar {
       return;
     }
 
+    // Sort projects by priority
+    const priorityOrder = {
+      "very-high": 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+    };
+
+    filteredProjects.sort((a, b) => {
+      const priorityA = priorityOrder[a.priority || "medium"];
+      const priorityB = priorityOrder[b.priority || "medium"];
+      return priorityA - priorityB;
+    });
+
     container.innerHTML = filteredProjects
-      .map(
-        (project) => `
+      .map((project) => {
+        const priorityColors = {
+          "very-high": "#ef4444",
+          high: "#f97316",
+          medium: "#eab308",
+          low: "#9ca3af",
+        };
+        const priorityColor = priorityColors[project.priority || "medium"];
+
+        return `
       <div class="project-item ${
         project.id === this.activeProjectId ? "active" : ""
       }" data-project-id="${project.id}">
+        <span class="project-priority-dot" style="background-color: ${priorityColor};"></span>
         <span class="project-emoji">${project.emoji || "📁"}</span>
         <span class="project-name">${project.name}</span>
       </div>
-    `
-      )
+    `;
+      })
       .join("");
   }
 
@@ -1953,6 +1984,7 @@ class PowerProjectSidebar {
         id: Date.now().toString(),
         name: projectName,
         emoji: "📁",
+        priority: "medium", // Default priority
         window: {
           tabs: currentWindow.tabs.map((tab) => ({
             url: tab.url,
@@ -2229,6 +2261,10 @@ class PowerProjectSidebar {
 
     // Pre-fill the project name
     document.getElementById("new-project-name").value = project.name;
+
+    // Pre-fill the priority
+    const prioritySelect = document.getElementById("project-priority");
+    prioritySelect.value = project.priority || "medium";
 
     // Change the button text and action
     const createBtn = document.getElementById("create-project-btn");
@@ -2519,6 +2555,7 @@ class PowerProjectSidebar {
 
     // Update the project
     project.name = projectName;
+    project.priority = document.getElementById("project-priority").value;
     project.window.tabs = newTabs;
     project.window.groups = newGroups;
 
@@ -2740,6 +2777,7 @@ class PowerProjectSidebar {
       return;
     }
 
+    const priority = document.getElementById("project-priority").value;
     const currentWindow = await chrome.windows.getCurrent({ populate: true });
     const groups = await chrome.tabGroups.query({ windowId: currentWindow.id });
 
@@ -2747,6 +2785,7 @@ class PowerProjectSidebar {
       id: Date.now().toString(),
       name: projectName,
       emoji: "📁",
+      priority: priority,
       window: {
         tabs: currentWindow.tabs
           .filter((tab) => selectedTabs.includes(tab.id))

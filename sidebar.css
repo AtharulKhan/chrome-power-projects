@@ -1162,6 +1162,13 @@ body {
   font-weight: 500;
 }
 
+.project-priority-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .project-item:hover {
   background: linear-gradient(
     135deg,

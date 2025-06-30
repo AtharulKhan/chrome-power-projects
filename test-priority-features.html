@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Priority Features</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .test-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+      .priority-demo {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+      }
+      .project-item {
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .priority-very-high {
+        background-color: #ef4444;
+      }
+      .priority-high {
+        background-color: #f97316;
+      }
+      .priority-medium {
+        background-color: #eab308;
+      }
+      .priority-low {
+        background-color: #9ca3af;
+      }
+
+      .feature-check {
+        margin: 10px 0;
+        padding: 10px;
+        border-left: 4px solid #28a745;
+        background: #f0fff0;
+      }
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .test-pass {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .test-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      code {
+        background: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Chrome Power Projects - Priority Features Test</h1>
+
+    <div class="test-section">
+      <h2>1. Auto-focus Search Bar</h2>
+      <div class="feature-check">
+        <strong>✓ Feature Implemented:</strong> Search bar auto-focuses when
+        sidebar opens
+      </div>
+      <div class="test-result test-info">
+        <strong>Implementation Details:</strong>
+        <ul>
+          <li>
+            Added auto-focus functionality in <code>sidebar.js</code> init()
+            method
+          </li>
+          <li>100ms delay ensures DOM is fully loaded before focusing</li>
+          <li>
+            Users can immediately start typing without clicking the search bar
+          </li>
+        </ul>
+      </div>
+      <div class="test-result test-pass">
+        <strong>Testing:</strong> Open the extension and observe that the cursor
+        is automatically placed in the search bar
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Priority Tags for Projects</h2>
+      <div class="feature-check">
+        <strong>✓ Feature Implemented:</strong> Projects now have priority
+        levels with color-coded indicators
+      </div>
+
+      <h3>Priority Levels Demo:</h3>
+      <div class="priority-demo">
+        <div class="project-item">
+          <span class="priority-dot priority-very-high"></span>
+          <span>📁</span>
+          <span>Critical Project (Very High)</span>
+        </div>
+        <div class="project-item">
+          <span class="priority-dot priority-high"></span>
+          <span>📁</span>
+          <span>Important Project (High)</span>
+        </div>
+        <div class="project-item">
+          <span class="priority-dot priority-medium"></span>
+          <span>📁</span>
+          <span>Regular Project (Medium)</span>
+        </div>
+        <div class="project-item">
+          <span class="priority-dot priority-low"></span>
+          <span>📁</span>
+          <span>Background Project (Low)</span>
+        </div>
+      </div>
+
+      <div class="test-result test-info">
+        <strong>Implementation Details:</strong>
+        <ul>
+          <li>
+            <strong>Color Scheme:</strong>
+            <ul>
+              <li>Very High: Red (#ef4444)</li>
+              <li>High: Orange (#f97316)</li>
+              <li>Medium: Yellow (#eab308)</li>
+              <li>Low: Gray (#9ca3af)</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Features:</strong>
+            <ul>
+              <li>Projects automatically sorted by priority</li>
+              <li>Priority selector in create/edit project modal</li>
+              <li>Visual priority dot indicator on each project</li>
+              <li>Default priority set to "medium"</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="test-result test-pass">
+        <strong>Testing Steps:</strong>
+        <ol>
+          <li>Open the extension and click "Save Current Window as Project"</li>
+          <li>Enter a project name and select a priority level</li>
+          <li>Create multiple projects with different priorities</li>
+          <li>
+            Observe that projects are sorted by priority in the projects bar
+          </li>
+          <li>Right-click a project to edit and change its priority</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Code Changes Summary</h2>
+      <div class="test-result test-info">
+        <strong>Modified Files:</strong>
+        <ul>
+          <li>
+            <code>sidebar.js</code>:
+            <ul>
+              <li>Added auto-focus in init() method</li>
+              <li>Added priority field to project data structure</li>
+              <li>Implemented priority sorting in renderProjects()</li>
+              <li>Added priority color mapping and dot rendering</li>
+              <li>Updated project creation/editing functions</li>
+            </ul>
+          </li>
+          <li>
+            <code>sidebar.html</code>:
+            <ul>
+              <li>Added priority selector dropdown in project modal</li>
+            </ul>
+          </li>
+          <li>
+            <code>sidebar.css</code>:
+            <ul>
+              <li>Added styles for priority dot (.project-priority-dot)</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      console.log("Test page loaded. Features implemented:");
+      console.log("1. Auto-focus search bar on extension open");
+      console.log("2. Priority tags for projects with color indicators");
+      console.log("3. Automatic sorting by priority");
+      console.log("4. Priority selection in create/edit modals");
+    </script>
+  </body>
+</html>
