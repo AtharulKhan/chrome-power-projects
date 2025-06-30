@@ -1649,6 +1649,11 @@ class PowerProjectSidebar {
         const result = await chrome.storage.local.get("savedGroups");
         this.savedGroups = result.savedGroups || [];
       }
+
+      // Make all saved groups collapsed by default
+      this.savedGroups.forEach((group) => {
+        this.collapsedSavedGroups.add(group.id);
+      });
     } catch (error) {
       console.error("Error loading saved groups:", error);
       this.savedGroups = [];
@@ -2205,46 +2210,101 @@ class PowerProjectSidebar {
         <h4 style="padding: 12px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">
           Bookmarks (${this.searchResults.bookmarks.length})
         </h4>
-        ${this.searchResults.bookmarks
-          .map((bookmark) => {
-            // Get favicon URL for the bookmark
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${
-              new URL(bookmark.url).hostname
-            }&sz=16`;
-
-            // Format bookmark path
-            const bookmarkPath =
-              bookmark.path && bookmark.path.length > 0
-                ? bookmark.path.join(" › ")
-                : "Bookmarks Bar";
-
-            return `
-          <div class="bookmark-item" data-bookmark-url="${bookmark.url}">
-            <img class="tab-favicon" 
-                 src="${this.getSafeFaviconUrl(bookmark.url)}" 
-                 alt="">
-            <div class="tab-info">
-              <div class="tab-title">${bookmark.title}</div>
-              <div class="tab-url">${bookmark.url}</div>
-              <div class="bookmark-path">${bookmarkPath}</div>
-            </div>
-            <div class="tab-actions">
-              <button class="tab-action-btn" title="Open in Current Tab">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                </svg>
-              </button>
-              <button class="tab-action-btn" title="Open in Popup Window">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        `;
-          })
-          .join("")}
       `;
+
+      // Group bookmarks by folder path
+      const bookmarksByFolder = new Map();
+
+      this.searchResults.bookmarks.forEach((bookmark) => {
+        let folderKey;
+        let folderDisplayName;
+
+        if (!bookmark.path || bookmark.path.length === 0) {
+          folderKey = "Bookmarks Bar";
+          folderDisplayName = "Bookmarks Bar";
+        } else if (bookmark.path.length === 1) {
+          folderKey = bookmark.path[0];
+          folderDisplayName = bookmark.path[0];
+        } else {
+          // For nested folders, use the last folder as key and show hierarchy
+          folderKey = bookmark.path.join(" > ");
+          const lastFolder = bookmark.path[bookmark.path.length - 1];
+          const parentPath = bookmark.path.slice(0, -1).join(" > ");
+          folderDisplayName = `${lastFolder} (${parentPath})`;
+        }
+
+        if (!bookmarksByFolder.has(folderKey)) {
+          bookmarksByFolder.set(folderKey, {
+            displayName: folderDisplayName,
+            bookmarks: [],
+          });
+        }
+
+        bookmarksByFolder.get(folderKey).bookmarks.push(bookmark);
+      });
+
+      // Render each folder as a collapsible section
+      bookmarksByFolder.forEach((folderData, folderKey) => {
+        html += `
+          <details class="bookmark-folder" open style="margin: 8px 0;">
+            <summary style="
+              padding: 8px 20px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              transition: background 0.2s;
+              list-style: none;
+              user-select: none;
+              font-weight: 600;
+              color: #374151;
+              background: #f9fafb;
+              border-bottom: 1px solid #e5e7eb;
+            " onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#f9fafb'">
+              <svg class="folder-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #6b7280;">
+                <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+              </svg>
+              <span>${this.escapeHtml(folderData.displayName)}</span>
+              <span style="color: #6b7280; font-weight: 400; font-size: 12px;">(${
+                folderData.bookmarks.length
+              })</span>
+            </summary>
+            <div style="background: white; border-bottom: 1px solid #e5e7eb;">
+              ${folderData.bookmarks
+                .map((bookmark) => {
+                  return `
+                <div class="bookmark-item" data-bookmark-url="${
+                  bookmark.url
+                }" style="margin-left: 16px;">
+                  <img class="tab-favicon" 
+                       src="${this.getSafeFaviconUrl(bookmark.url)}" 
+                       alt="">
+                  <div class="tab-info">
+                    <div class="tab-title">${this.escapeHtml(
+                      bookmark.title
+                    )}</div>
+                    <div class="tab-url">${bookmark.url}</div>
+                  </div>
+                  <div class="tab-actions">
+                    <button class="tab-action-btn" title="Open in Current Tab">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                      </svg>
+                    </button>
+                    <button class="tab-action-btn" title="Open in Popup Window">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              `;
+                })
+                .join("")}
+            </div>
+          </details>
+        `;
+      });
     }
 
     // Render project results
