@@ -1933,12 +1933,7 @@ class PowerProjectSidebar {
       // Get the current window
       const currentWindow = await chrome.windows.getCurrent();
 
-      // Get existing tabs
-      const existingTabs = await chrome.tabs.query({
-        windowId: currentWindow.id,
-      });
-
-      // Create all project tabs first
+      // Create all project tabs
       const newTabs = [];
       for (const tabData of project.window.tabs) {
         const tab = await chrome.tabs.create({
@@ -1947,11 +1942,6 @@ class PowerProjectSidebar {
           active: false,
         });
         newTabs.push(tab);
-      }
-
-      // Now close the old tabs (after new tabs are created to prevent window closure)
-      if (existingTabs.length > 0) {
-        await chrome.tabs.remove(existingTabs.map((tab) => tab.id));
       }
 
       // Create group mappings

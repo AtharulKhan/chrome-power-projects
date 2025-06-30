@@ -1,70 +1,47 @@
 # Active Context
 
-## Current Focus: Pinned Tab Enhancement - COMPLETED
+## Current Focus: Project Opening Behavior - COMPLETED
 
 ### Issue Resolved
 
-Enhanced the "All Tabs" section to properly handle pinned tabs with visual indicators and protection from deletion.
+Modified the project opening functionality to preserve existing tabs when opening a project, instead of deleting them.
 
 ### Recent Changes
 
-1. **Added Pinned Tab Visual Indicator**:
-
-   - Added "PINNED" tag that appears below the tab URL for pinned tabs
-   - Styled with green gradient background and border
-   - Small, uppercase text with proper spacing
-
-2. **Prevented Deletion of Pinned Tabs**:
-
-   - Modified `createTabHTML()` method to conditionally show close button
-   - Pinned tabs no longer display the close button
-   - Only unpinned tabs can be closed directly
-
-3. **CSS Styling for Pinned Tag**:
-   - Added `.pinned-tag` class with green gradient styling
-   - Font size: 9px, uppercase, with letter spacing
-   - Green color scheme to match pinned status
-   - Rounded corners and subtle border
+1. **Modified `switchToProject` function in sidebar.js**:
+   - Removed the code that was deleting existing tabs when opening a project
+   - Removed the `existingTabs` query and the `chrome.tabs.remove()` call
+   - Now when opening a project, it adds the project's tabs to the current window alongside existing tabs
 
 ### Key Implementation Details
 
-- **JavaScript Changes**: Modified `createTabHTML()` method in sidebar.js
-- **CSS Changes**: Added `.pinned-tag` styling in sidebar.css
-- **User Experience**: Clear visual distinction between pinned and unpinned tabs
-- **Safety**: Pinned tabs cannot be accidentally deleted
+The change was simple but important:
+
+- **Before**: The function would query all existing tabs in the current window and delete them before creating the project tabs
+- **After**: The function now only creates the new project tabs, leaving existing tabs untouched
+
+This aligns with the "Non-Destructive" user experience goal outlined in the product context.
 
 ### Technical Implementation
 
+Removed this code block from `switchToProject`:
+
 ```javascript
-// In createTabHTML method:
-${isPinned ? '<div class="pinned-tag">PINNED</div>' : ""}
+// Get existing tabs
+const existingTabs = await chrome.tabs.query({
+  windowId: currentWindow.id,
+});
 
-// Close button conditional rendering:
-${isPinned ? '' : `<button class="tab-action-btn close" title="Close Tab">...</button>`}
-```
-
-```css
-.pinned-tag {
-  font-size: 9px;
-  font-weight: 600;
-  color: #059669;
-  background: linear-gradient(
-    135deg,
-    rgba(16, 185, 129, 0.15) 0%,
-    rgba(5, 150, 105, 0.12) 100%
-  );
-  padding: 2px 6px;
-  border-radius: 8px;
-  margin-top: 2px;
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+// Now close the old tabs (after new tabs are created to prevent window closure)
+if (existingTabs.length > 0) {
+  await chrome.tabs.remove(existingTabs.map((tab) => tab.id));
 }
 ```
 
 ### Next Steps
 
-1. Test the implementation in actual Chrome extension environment
-2. Verify pinned tab behavior works correctly
-3. Consider adding similar protection for other critical operations
+1. Test the implementation to ensure projects open correctly alongside existing tabs
+2. Consider if users might want an option to choose between:
+   - Opening project alongside existing tabs (current behavior)
+   - Opening project in a new window
+   - Replacing current tabs (old behavior)

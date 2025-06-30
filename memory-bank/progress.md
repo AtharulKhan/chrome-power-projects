@@ -8,7 +8,9 @@
 - **Search Functionality**:
   - Real-time search across tabs, groups, and bookmarks
   - NEW: Google search option for search queries
-- **Projects System**: Save and restore entire window configurations
+- **Projects System**:
+  - Save and restore entire window configurations
+  - UPDATED: Projects now open alongside existing tabs (non-destructive)
 - **Saved Groups**:
   - FIXED: Save group functionality now works properly
   - Restore groups in current or new window
@@ -34,6 +36,7 @@
 - Tab history tracking
 - Tab notes/annotations
 - Advanced project management (scheduling, templates)
+- Option to choose project opening behavior (alongside/new window/replace)
 
 ## Current Status
 
@@ -42,6 +45,7 @@
   - Saved groups now properly save and display
   - Added Google search option in search results
   - Made projects bar more sleek and minimalistic
+  - Projects now open non-destructively alongside existing tabs
 - Ready for daily use with tab and group management
 
 ## Known Issues
@@ -72,6 +76,12 @@
    - More compact project items
 
 4. **Unified Import/Export**:
+
    - Implemented a single import/export system for all user data (projects and saved groups).
    - Added UI controls to the project management modal.
    - This provides a comprehensive backup and restore solution.
+
+5. **Non-Destructive Project Opening**:
+   - Modified project opening behavior to preserve existing tabs
+   - Projects now open in the current window alongside existing tabs
+   - Removed the destructive tab deletion that was happening before
