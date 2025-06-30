@@ -1510,6 +1510,81 @@ body {
   transform: translateY(-1px);
 }
 
+/* Projects Popup Styles */
+.projects-popup-list {
+  padding: 0;
+}
+
+.projects-popup-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(248, 250, 252, 0.6) 100%
+  );
+}
+
+.projects-popup-item:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(139, 92, 246, 0.06) 100%
+  );
+  transform: translateX(4px);
+}
+
+.projects-popup-item:last-child {
+  border-bottom: none;
+}
+
+.projects-popup-item .project-priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.projects-popup-item .project-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.projects-popup-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.projects-popup-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projects-popup-details {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projects-popup-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
 /* Projects List in Modal */
 .projects-list-modal {
   display: grid;

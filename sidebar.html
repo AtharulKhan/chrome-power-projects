@@ -283,6 +283,20 @@
             </button>
             <button
               class="icon-btn"
+              id="expand-projects-btn"
+              title="Expand Projects"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
+              </svg>
+            </button>
+            <button
+              class="icon-btn"
               id="save-project-btn"
               title="Save Current Window as Project"
             >
@@ -601,6 +615,47 @@
                 Create & Add
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects Popup Modal -->
+    <div class="modal-overlay" id="projects-popup-modal" style="display: none">
+      <div class="modal-content" style="max-width: 500px; max-height: 80vh">
+        <div class="modal-header">
+          <h2>All Projects</h2>
+          <button class="modal-close" id="close-projects-popup-modal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <input
+              type="search"
+              id="projects-popup-search"
+              class="section-search-input"
+              placeholder="Search projects..."
+              autocomplete="off"
+              style="width: 100%; margin-bottom: 16px"
+            />
+          </div>
+          <div
+            class="projects-popup-list"
+            id="projects-popup-list"
+            style="
+              max-height: 400px;
+              overflow-y: auto;
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              background: white;
+            "
+          >
+            <!-- Projects will be rendered here -->
           </div>
         </div>
       </div>

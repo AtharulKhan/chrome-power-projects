@@ -28,6 +28,7 @@ class PowerProjectSidebar {
     this.projectsSearchQuery = ""; // Track projects search
     this.projectsSearchVisible = false; // Track projects search visibility
     this.projectsModalSearchQuery = ""; // Track projects modal search
+    this.projectsPopupSearchQuery = ""; // Track projects popup search
 
     // Search filters
     this.searchFilters = {
@@ -499,6 +500,13 @@ class PowerProjectSidebar {
         this.toggleProjectSearch();
       });
 
+    // Expand projects button
+    document
+      .getElementById("expand-projects-btn")
+      .addEventListener("click", () => {
+        this.openProjectsPopup();
+      });
+
     // Projects search input
     document
       .getElementById("projects-search")
@@ -566,6 +574,29 @@ class PowerProjectSidebar {
       .addEventListener("input", (e) => {
         this.projectsModalSearchQuery = e.target.value.toLowerCase();
         this.renderProjectsModal();
+      });
+
+    // Projects popup modal event listeners
+    document
+      .getElementById("close-projects-popup-modal")
+      .addEventListener("click", () => {
+        this.closeProjectsPopupModal();
+      });
+
+    document
+      .getElementById("projects-popup-search")
+      .addEventListener("input", (e) => {
+        this.projectsPopupSearchQuery = e.target.value.toLowerCase();
+        this.renderProjectsPopup();
+      });
+
+    // Close projects popup when clicking outside
+    document
+      .getElementById("projects-popup-modal")
+      .addEventListener("click", (e) => {
+        if (e.target.id === "projects-popup-modal") {
+          this.closeProjectsPopupModal();
+        }
       });
 
     // Modal event listeners
@@ -3659,6 +3690,100 @@ class PowerProjectSidebar {
       this.projectsSearchQuery = "";
       this.renderProjects();
     }
+  }
+
+  // Projects Popup Methods
+  openProjectsPopup() {
+    document.getElementById("projects-popup-modal").style.display = "flex";
+    this.projectsPopupSearchQuery = "";
+    document.getElementById("projects-popup-search").value = "";
+    this.renderProjectsPopup();
+  }
+
+  closeProjectsPopupModal() {
+    document.getElementById("projects-popup-modal").style.display = "none";
+  }
+
+  renderProjectsPopup() {
+    const container = document.getElementById("projects-popup-list");
+
+    if (this.projects.length === 0) {
+      container.innerHTML = `
+        <div class="projects-popup-empty">
+          No projects yet. Create your first project to see it here!
+        </div>
+      `;
+      return;
+    }
+
+    // Filter projects based on search query
+    let filteredProjects = this.projects;
+    if (this.projectsPopupSearchQuery) {
+      filteredProjects = this.projects.filter((project) =>
+        project.name.toLowerCase().includes(this.projectsPopupSearchQuery)
+      );
+    }
+
+    if (filteredProjects.length === 0) {
+      container.innerHTML = `
+        <div class="projects-popup-empty">
+          No projects match your search.
+        </div>
+      `;
+      return;
+    }
+
+    // Sort projects by priority
+    const priorityOrder = {
+      "very-high": 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+    };
+
+    filteredProjects.sort((a, b) => {
+      const priorityA = priorityOrder[a.priority || "medium"];
+      const priorityB = priorityOrder[b.priority || "medium"];
+      return priorityA - priorityB;
+    });
+
+    container.innerHTML = filteredProjects
+      .map((project) => {
+        const priorityColors = {
+          "very-high": "#ef4444",
+          high: "#f97316",
+          medium: "#eab308",
+          low: "#9ca3af",
+        };
+        const priorityColor = priorityColors[project.priority || "medium"];
+
+        return `
+          <div class="projects-popup-item" data-project-id="${project.id}">
+            <span class="project-priority-dot" style="background-color: ${priorityColor};"></span>
+            <span class="project-emoji">${project.emoji || "📁"}</span>
+            <div class="projects-popup-info">
+              <div class="projects-popup-name">${project.name}</div>
+              <div class="projects-popup-details">
+                <span>${project.window.tabs.length} tabs</span>
+                <span>•</span>
+                <span>${project.window.groups.length} groups</span>
+                <span>•</span>
+                <span>${new Date(project.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    // Add click handlers for project items
+    container.querySelectorAll(".projects-popup-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const projectId = item.dataset.projectId;
+        this.closeProjectsPopupModal();
+        this.switchToProject(projectId);
+      });
+    });
   }
 
   // Add to Project Methods
