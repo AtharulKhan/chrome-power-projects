@@ -320,7 +320,17 @@ class PowerProjectSidebar {
         e.preventDefault();
         const tabId = parseInt(tabItem.dataset.tabId);
         if (tabId) {
-          this.switchToTab(tabId);
+          // Check if we're in search results - if so, open in new tab instead of switching
+          const isInSearchResults = target.closest("#search-results-section");
+          if (isInSearchResults) {
+            // Find the tab and create a new tab with its URL
+            const tab = this.tabs.find((t) => t.id === tabId);
+            if (tab) {
+              chrome.tabs.create({ url: tab.url });
+            }
+          } else {
+            this.switchToTab(tabId);
+          }
         }
       }
 
@@ -374,7 +384,13 @@ class PowerProjectSidebar {
           this.openInPopupWindow(url);
         } else if (!button && target.closest(".tab-info")) {
           e.preventDefault();
-          this.openBookmark(url);
+          // Check if we're in search results - if so, open in new tab instead of current tab
+          const isInSearchResults = target.closest("#search-results-section");
+          if (isInSearchResults) {
+            this.openBookmark(url, true); // Open in new tab
+          } else {
+            this.openBookmark(url); // Open in current tab (default behavior)
+          }
         }
       }
 
