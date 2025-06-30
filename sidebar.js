@@ -29,6 +29,14 @@ class PowerProjectSidebar {
     this.projectsSearchVisible = false; // Track projects search visibility
     this.projectsModalSearchQuery = ""; // Track projects modal search
 
+    // Search filters
+    this.searchFilters = {
+      tabs: true,
+      bookmarks: true,
+      groups: true,
+      projects: true,
+    };
+
     this.init();
   }
 
@@ -406,6 +414,20 @@ class PowerProjectSidebar {
       }
     });
 
+    // Event delegation for search filter checkboxes
+    document.addEventListener("change", (e) => {
+      if (e.target.id && e.target.id.startsWith("filter-")) {
+        const filterType = e.target.id.replace("filter-", "");
+        if (this.searchFilters.hasOwnProperty(filterType)) {
+          this.searchFilters[filterType] = e.target.checked;
+          // Re-render search results with updated filters
+          if (this.searchQuery) {
+            this.renderSearchResults();
+          }
+        }
+      }
+    });
+
     // Context menu
     document.addEventListener("contextmenu", (e) => {
       if (e.target.closest(".tab-item")) {
@@ -509,6 +531,18 @@ class PowerProjectSidebar {
       if (projectItem) {
         const projectId = projectItem.dataset.projectId;
         this.switchToProject(projectId);
+      }
+    });
+
+    // Event delegation for project tabs in search results
+    document.addEventListener("click", (e) => {
+      const projectTabItem = e.target.closest(".project-tab-item");
+      if (projectTabItem && e.target.closest("#search-results-section")) {
+        e.preventDefault();
+        const tabUrl = projectTabItem.dataset.tabUrl;
+        if (tabUrl) {
+          chrome.tabs.create({ url: tabUrl });
+        }
       }
     });
 
@@ -989,6 +1023,12 @@ class PowerProjectSidebar {
   hideContextMenu() {
     document.getElementById("context-menu").style.display = "none";
     document.getElementById("saved-group-context-menu").style.display = "none";
+
+    // Remove the dynamically created move-to-group menu
+    const moveToGroupMenu = document.getElementById("move-to-group-menu");
+    if (moveToGroupMenu) {
+      moveToGroupMenu.remove();
+    }
   }
 
   showSavedGroupContextMenu(event, savedGroupElement) {
@@ -1043,19 +1083,138 @@ class PowerProjectSidebar {
     }
   }
 
+  async showMoveToGroupMenu(tabId) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    // Get groups in the same window as the tab
+    const groupsInWindow = this.groups.filter((group) => {
+      const tabsInGroup = this.tabs.filter((t) => t.groupId === group.id);
+      return tabsInGroup.length > 0 && tabsInGroup[0].windowId === tab.windowId;
+    });
+
+    if (groupsInWindow.length === 0) {
+      alert("No groups available in this window. Create a group first.");
+      return;
+    }
+
+    // Create a submenu for groups
+    const moveToGroupMenu = document.createElement("div");
+    moveToGroupMenu.id = "move-to-group-menu";
+    moveToGroupMenu.className = "context-menu";
+    moveToGroupMenu.style.position = "absolute";
+    moveToGroupMenu.style.display = "block";
+
+    // Position it next to the main context menu
+    const contextMenu = document.getElementById("context-menu");
+    const rect = contextMenu.getBoundingClientRect();
+    moveToGroupMenu.style.left = `${rect.right}px`;
+    moveToGroupMenu.style.top = `${rect.top}px`;
+
+    // Add groups to the menu
+    let menuHTML = "";
+    groupsInWindow.forEach((group) => {
+      const tabCount = this.tabs.filter((t) => t.groupId === group.id).length;
+      menuHTML += `
+        <div class="context-item move-to-group-item" data-group-id="${
+          group.id
+        }" data-tab-id="${tabId}">
+          <span class="group-color" style="background-color: ${
+            group.color
+          }; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+          ${group.title || "Unnamed Group"} (${tabCount})
+        </div>
+      `;
+    });
+
+    // Add option to create new group
+    menuHTML += `
+      <div class="context-separator"></div>
+      <div class="context-item move-to-new-group" data-tab-id="${tabId}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+        Create New Group
+      </div>
+    `;
+
+    moveToGroupMenu.innerHTML = menuHTML;
+    document.body.appendChild(moveToGroupMenu);
+
+    // Add click handlers
+    moveToGroupMenu.querySelectorAll(".move-to-group-item").forEach((item) => {
+      item.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const groupId = parseInt(item.dataset.groupId);
+        const tabId = parseInt(item.dataset.tabId);
+        await this.moveTabToGroup(tabId, groupId);
+        this.hideContextMenu();
+      });
+    });
+
+    // Handle create new group option
+    const newGroupOption = moveToGroupMenu.querySelector(".move-to-new-group");
+    if (newGroupOption) {
+      newGroupOption.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const tabId = parseInt(newGroupOption.dataset.tabId);
+        await this.moveTabToNewGroup(tabId);
+        this.hideContextMenu();
+      });
+    }
+  }
+
+  async moveTabToGroup(tabId, groupId) {
+    try {
+      await chrome.tabs.group({ tabIds: [tabId], groupId });
+      this.debouncedRefresh();
+    } catch (error) {
+      console.error("Error moving tab to group:", error);
+      alert(
+        "Failed to move tab to group. The tab might be pinned or the group might be in a different window."
+      );
+    }
+  }
+
+  async moveTabToNewGroup(tabId) {
+    try {
+      const groupName = prompt("Enter name for the new group:");
+      if (!groupName) return;
+
+      const groupId = await chrome.tabs.group({ tabIds: [tabId] });
+      await chrome.tabGroups.update(groupId, {
+        title: groupName,
+        color: "blue",
+      });
+      this.debouncedRefresh();
+    } catch (error) {
+      console.error("Error creating new group:", error);
+      alert("Failed to create new group. The tab might be pinned.");
+    }
+  }
+
   handleContextMenuAction(action, tabId) {
     switch (action) {
+      case "switch":
+        this.switchToTab(tabId);
+        break;
+      case "close":
+        this.closeTab(tabId);
+        break;
       case "pin":
         this.pinTab(tabId);
         break;
       case "duplicate":
         this.duplicateTab(tabId);
         break;
-      case "close-other":
-        this.closeOtherTabs(tabId);
+      case "move-to-group":
+        this.showMoveToGroupMenu(tabId);
         break;
-      case "close-left":
-        this.closeTabsToLeft(tabId);
+      case "copy-url":
+        this.copyTabUrl(tabId);
+        break;
+      case "close-others":
+        this.closeOtherTabs(tabId);
         break;
       case "close-right":
         this.closeTabsToRight(tabId);
@@ -1165,6 +1324,15 @@ class PowerProjectSidebar {
       this.debouncedRefresh();
     } catch (error) {
       console.error("Error closing tabs to right:", error);
+    }
+  }
+
+  async copyTabUrl(tabId) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      await navigator.clipboard.writeText(tab.url);
+    } catch (error) {
+      console.error("Error copying tab URL:", error);
     }
   }
 
@@ -1572,9 +1740,21 @@ class PowerProjectSidebar {
     return div.innerHTML;
   }
 
-  getSafeFaviconUrl(url) {
-    // Always return default icon for now to avoid edge:// errors
-    return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
+  getSafeFaviconUrl(url, favIconUrl = null) {
+    // If we have a favIconUrl from the tab data, use it
+    if (favIconUrl) {
+      return favIconUrl;
+    }
+
+    // Try to generate a favicon URL from the domain
+    try {
+      const urlObj = new URL(url);
+      // Use Google's favicon service which works reliably
+      return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=16`;
+    } catch (e) {
+      // Return default icon for invalid URLs
+      return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
+    }
   }
 
   toggleSavedGroupCollapse(groupId) {
@@ -1734,6 +1914,7 @@ class PowerProjectSidebar {
       tabs: [],
       bookmarks: [],
       groups: [],
+      projects: [],
     };
 
     // Search tabs
@@ -1762,12 +1943,105 @@ class PowerProjectSidebar {
       return hasMatchingTitle || hasMatchingTab;
     });
 
+    // Search projects
+    this.searchResults.projects = this.projects.filter((project) => {
+      // Search in project name
+      if (project.name.toLowerCase().includes(query)) {
+        return true;
+      }
+      // Search in project tabs
+      return project.window.tabs.some(
+        (tab) =>
+          tab.title.toLowerCase().includes(query) ||
+          tab.url.toLowerCase().includes(query)
+      );
+    });
+
     this.renderSearchResults();
   }
 
   renderSearchResults() {
     const container = document.getElementById("search-results");
     let html = "";
+
+    // Add filter controls
+    html += `
+      <div class="search-filters" style="
+        padding: 12px 20px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      ">
+        <span style="font-size: 12px; color: #6b7280; font-weight: 600;">FILTERS:</span>
+        <label class="filter-checkbox" style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #374151;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s;
+        " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="filter-tabs" ${
+            this.searchFilters.tabs ? "checked" : ""
+          } style="cursor: pointer;">
+          <span>Tabs</span>
+        </label>
+        <label class="filter-checkbox" style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #374151;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s;
+        " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="filter-bookmarks" ${
+            this.searchFilters.bookmarks ? "checked" : ""
+          } style="cursor: pointer;">
+          <span>Bookmarks</span>
+        </label>
+        <label class="filter-checkbox" style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #374151;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s;
+        " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="filter-groups" ${
+            this.searchFilters.groups ? "checked" : ""
+          } style="cursor: pointer;">
+          <span>Grouped Tabs</span>
+        </label>
+        <label class="filter-checkbox" style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #374151;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s;
+        " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="filter-projects" ${
+            this.searchFilters.projects ? "checked" : ""
+          } style="cursor: pointer;">
+          <span>Projects</span>
+        </label>
+      </div>
+    `;
 
     // Add "Search on Google" option at the top
     if (this.searchQuery) {
@@ -1786,7 +2060,7 @@ class PowerProjectSidebar {
     }
 
     // Render tab results
-    if (this.searchResults.tabs.length > 0) {
+    if (this.searchFilters.tabs && this.searchResults.tabs.length > 0) {
       html += `
         <h4 style="padding: 12px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">
           Tabs (${this.searchResults.tabs.length})
@@ -1798,7 +2072,7 @@ class PowerProjectSidebar {
     }
 
     // Render group results
-    if (this.searchResults.groups.length > 0) {
+    if (this.searchFilters.groups && this.searchResults.groups.length > 0) {
       html += `
         <h4 style="padding: 12px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">
           Tab Groups (${this.searchResults.groups.length})
@@ -1843,7 +2117,10 @@ class PowerProjectSidebar {
     }
 
     // Render bookmark results
-    if (this.searchResults.bookmarks.length > 0) {
+    if (
+      this.searchFilters.bookmarks &&
+      this.searchResults.bookmarks.length > 0
+    ) {
       html += `
         <h4 style="padding: 12px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">
           Bookmarks (${this.searchResults.bookmarks.length})
@@ -1890,12 +2167,245 @@ class PowerProjectSidebar {
       `;
     }
 
+    // Render project results
+    if (this.searchFilters.projects && this.searchResults.projects.length > 0) {
+      html += `
+        <h4 style="padding: 12px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">
+          Projects (${this.searchResults.projects.length})
+        </h4>
+      `;
+
+      this.searchResults.projects.forEach((project) => {
+        const priorityColors = {
+          "very-high": "#ef4444",
+          high: "#f97316",
+          medium: "#eab308",
+          low: "#9ca3af",
+        };
+        const priorityColor = priorityColors[project.priority || "medium"];
+
+        html += `
+          <details class="project-search-result-container" style="margin: 8px 0;">
+            <summary style="
+              padding: 12px 20px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              transition: background 0.2s;
+              list-style: none;
+              user-select: none;
+            " onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <svg class="collapse-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="transition: transform 0.2s;">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+              </svg>
+              <span class="project-priority-dot" style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: ${priorityColor};
+                flex-shrink: 0;
+              "></span>
+              <span class="project-emoji" style="font-size: 20px;">${
+                project.emoji || "📁"
+              }</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #111827;">${this.escapeHtml(
+                  project.name
+                )}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                  ${project.window.tabs.length} tabs • ${
+          project.window.groups.length
+        } groups
+                </div>
+              </div>
+              <button class="tab-action-btn" onclick="event.stopPropagation(); sidebar.openProjectFromSearch('${
+                project.id
+              }')" title="Open Project">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                </svg>
+              </button>
+            </summary>
+            <div class="project-tabs-list" style="
+              background: #f9fafb;
+              border-top: 1px solid #e5e7eb;
+              max-height: 300px;
+              overflow-y: auto;
+            ">
+              ${this.renderProjectTabs(project)}
+            </div>
+          </details>
+        `;
+      });
+    }
+
     if (html === "") {
       html =
         '<div style="padding: 20px; text-align: center; color: #94a3b8;">No results found</div>';
     }
 
     container.innerHTML = html;
+
+    // Add click handlers for project search results
+    container.querySelectorAll(".project-search-result").forEach((element) => {
+      element.addEventListener("click", (e) => {
+        if (!e.target.closest("button")) {
+          const projectId = element.dataset.projectId;
+          this.switchToProject(projectId);
+        }
+      });
+    });
+  }
+
+  // Helper method to open project from search
+  openProjectFromSearch(projectId) {
+    this.switchToProject(projectId);
+  }
+
+  // Helper method to render project tabs in search results
+  renderProjectTabs(project) {
+    let html = "";
+
+    // Group tabs by their groupId
+    const groupedTabs = new Map();
+    const ungroupedTabs = [];
+
+    project.window.tabs.forEach((tab) => {
+      if (
+        tab.groupId &&
+        tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE &&
+        tab.groupId !== -1
+      ) {
+        if (!groupedTabs.has(tab.groupId)) {
+          groupedTabs.set(tab.groupId, []);
+        }
+        groupedTabs.get(tab.groupId).push(tab);
+      } else {
+        ungroupedTabs.push(tab);
+      }
+    });
+
+    // Render grouped tabs
+    project.window.groups.forEach((group) => {
+      const tabs = groupedTabs.get(group.id) || [];
+      if (tabs.length > 0) {
+        html += `
+          <div style="padding: 8px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span class="group-color" style="background-color: ${
+                group.color
+              }; width: 12px; height: 12px; border-radius: 50%;"></span>
+              <span style="font-weight: 600; color: #374151;">${
+                group.title || "Unnamed Group"
+              }</span>
+              <span style="color: #6b7280; font-size: 12px;">(${
+                tabs.length
+              })</span>
+            </div>
+            <div style="margin-left: 20px;">
+              ${tabs
+                .map(
+                  (tab) => `
+                <div class="project-tab-item" data-tab-url="${tab.url}" style="
+                  padding: 6px 12px;
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  transition: background 0.2s;
+                  border-radius: 4px;
+                " onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                  <img src="${
+                    tab.favIconUrl ||
+                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
+                  }" 
+                       style="width: 16px; height: 16px;" alt="">
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 13px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(
+                      tab.title
+                    )}</div>
+                    <div style="font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.cleanUrl(
+                      tab.url
+                    )}</div>
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    // Render ungrouped tabs
+    if (ungroupedTabs.length > 0) {
+      html += `
+        <div style="padding: 8px 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-weight: 600; color: #374151;">Ungrouped Tabs</span>
+            <span style="color: #6b7280; font-size: 12px;">(${
+              ungroupedTabs.length
+            })</span>
+          </div>
+          <div style="margin-left: 20px;">
+            ${ungroupedTabs
+              .map(
+                (tab) => `
+              <div class="project-tab-item" data-tab-url="${tab.url}" style="
+                padding: 6px 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: background 0.2s;
+                border-radius: 4px;
+              " onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                <img src="${
+                  tab.favIconUrl ||
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
+                }" 
+                     style="width: 16px; height: 16px;" alt="">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 13px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(
+                    tab.title
+                  )}</div>
+                  <div style="font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.cleanUrl(
+                    tab.url
+                  )}</div>
+                </div>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    return html;
+  }
+
+  // Helper method to clean URLs for display
+  cleanUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      // Remove protocol and www
+      let cleanedUrl = urlObj.hostname.replace(/^www\./, "");
+      // Add path if it's not just "/"
+      if (urlObj.pathname !== "/") {
+        cleanedUrl += urlObj.pathname;
+      }
+      // Truncate if too long
+      if (cleanedUrl.length > 50) {
+        cleanedUrl = cleanedUrl.substring(0, 47) + "...";
+      }
+      return cleanedUrl;
+    } catch (e) {
+      // Fallback for invalid URLs
+      return url.substring(0, 50) + (url.length > 50 ? "..." : "");
+    }
   }
 
   // Projects functionality
@@ -2360,55 +2870,113 @@ class PowerProjectSidebar {
       }
     });
 
-    let html =
-      '<div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">Select tabs to keep in this project. Unchecked tabs will be removed.</div>';
+    let html = `
+      <div style="
+        font-size: 13px; 
+        color: #6b7280; 
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      ">
+        <div style="font-weight: 600; margin-bottom: 4px;">Select tabs to keep in this project</div>
+        <div style="font-size: 12px;">Unchecked tabs will be removed. You can move ungrouped tabs to groups.</div>
+      </div>
+    `;
 
     // Render groups with their tabs
     project.window.groups.forEach((group) => {
       const tabs = groupedTabs.get(group.id) || [];
       if (tabs.length > 0) {
         html += `
-          <div class="selection-group">
-            <div class="selection-group-header">
+          <div class="selection-group" style="
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+          ">
+            <div class="selection-group-header" style="
+              background: #f9fafb;
+              padding: 12px 16px;
+              border-bottom: 1px solid #e5e7eb;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+            ">
               <input type="checkbox" id="group-${
                 group.id
               }" class="group-checkbox" data-group-id="${group.id}" checked>
-              <label for="group-${group.id}" class="selection-group-title">
-                <span class="group-color" style="background-color: ${
-                  group.color
-                }; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
-                ${group.title || "Unnamed Group"} (${tabs.length})
+              <label for="group-${
+                group.id
+              }" class="selection-group-title" style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+                cursor: pointer;
+                font-weight: 600;
+                color: #111827;
+              ">
+                <span class="group-color" style="
+                  background-color: ${group.color};
+                  width: 14px;
+                  height: 14px;
+                  border-radius: 50%;
+                  flex-shrink: 0;
+                "></span>
+                <span>${group.title || "Unnamed Group"}</span>
+                <span style="
+                  font-weight: 400;
+                  color: #6b7280;
+                  font-size: 13px;
+                ">(${tabs.length} tabs)</span>
               </label>
             </div>
-            <div class="selection-tabs">
+            <div class="selection-tabs" style="padding: 8px;">
               ${tabs
                 .map(
                   (tab) => `
-                <div class="selection-tab">
+                <div class="selection-tab" style="
+                  display: flex;
+                  align-items: center;
+                  padding: 8px 12px;
+                  border-radius: 6px;
+                  transition: background 0.2s;
+                  cursor: pointer;
+                " onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
                   <input type="checkbox" id="project-tab-${
                     tab.originalIndex
                   }" class="tab-checkbox" data-tab-index="${
                     tab.originalIndex
-                  }" data-group-id="${group.id}" checked>
-                  <label for="project-tab-${
-                    tab.originalIndex
-                  }" style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                    <img src="${
-                      tab.favIconUrl ||
-                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
-                    }" 
-                         style="width: 16px; height: 16px;" alt="">
-                    <span class="selection-tab-title" style="flex: 1;">${
-                      tab.title
-                    }</span>
-                    <button class="tab-action-btn close remove-from-project" title="Remove from project" data-tab-index="${
-                      tab.originalIndex
-                    }">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                      </svg>
-                    </button>
+                  }" data-group-id="${
+                    group.id
+                  }" checked style="margin-right: 12px;">
+                  <label for="project-tab-${tab.originalIndex}" style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    flex: 1;
+                    cursor: pointer;
+                    min-width: 0;
+                  ">
+                    <img class="tab-favicon" src="${this.getSafeFaviconUrl(
+                      tab.url,
+                      tab.favIconUrl
+                    )}">
+                    <div class="tab-info" style="flex: 1; min-width: 0;">
+                      <div class="tab-title">${this.escapeHtml(tab.title)}</div>
+                      <div class="tab-url">${this.cleanUrl(tab.url)}</div>
+                    </div>
                   </label>
+                  <button class="tab-action-btn remove-from-project" title="Remove from project" data-tab-index="${
+                    tab.originalIndex
+                  }" style="opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
                 </div>
               `
                 )
@@ -2422,46 +2990,138 @@ class PowerProjectSidebar {
     // Render ungrouped tabs
     if (ungroupedTabs.length > 0) {
       html += `
-        <div class="selection-group">
-          <div class="selection-group-header">
+        <div class="selection-group" style="
+          margin-bottom: 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+          background: white;
+        ">
+          <div class="selection-group-header" style="
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          ">
             <input type="checkbox" id="ungrouped" class="group-checkbox" data-group-id="ungrouped" checked>
-            <label for="ungrouped" class="selection-group-title">
-              Ungrouped Tabs (${ungroupedTabs.length})
+            <label for="ungrouped" class="selection-group-title" style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              flex: 1;
+              cursor: pointer;
+              font-weight: 600;
+              color: #111827;
+            ">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.5;">
+                <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+              </svg>
+              <span>Ungrouped Tabs</span>
+              <span style="
+                font-weight: 400;
+                color: #6b7280;
+                font-size: 13px;
+              ">(${ungroupedTabs.length})</span>
             </label>
+            ${
+              project.window.groups.length > 0
+                ? `
+              <div style="
+                font-size: 12px;
+                color: #6b7280;
+                padding: 4px 8px;
+                background: #e0e7ff;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+              ">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11 9h2V6h3V4h-3V1h-2v3H8v2h3v3zm-4 9c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2zm-9.83-3.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.86-7.01L19.42 4h-.01l-1.1 2-2.76 5H8.53l-.13-.27L6.16 6l-.95-2-.94-2H1v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.13 0-.25-.11-.25-.25z"/>
+                </svg>
+                Drag tabs here or use move button
+              </div>
+            `
+                : ""
+            }
           </div>
-          <div class="selection-tabs">
-            ${ungroupedTabs
-              .map(
-                (tab) => `
-              <div class="selection-tab">
+          <div class="selection-tabs" style="padding: 8px; ${
+            ungroupedTabs.length === 0
+              ? "min-height: 100px; display: flex; align-items: center; justify-content: center;"
+              : ""
+          }">
+            ${
+              ungroupedTabs.length === 0
+                ? `
+              <div style="
+                color: #9ca3af;
+                font-size: 13px;
+                text-align: center;
+              ">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.3; margin-bottom: 8px;">
+                  <path d="M10 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2zm10 0V8a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2z"/>
+                </svg>
+                <div>No ungrouped tabs</div>
+              </div>
+            `
+                : ungroupedTabs
+                    .map(
+                      (tab) => `
+              <div class="selection-tab" style="
+                display: flex;
+                align-items: center;
+                padding: 8px 12px;
+                border-radius: 6px;
+                transition: background 0.2s;
+                cursor: pointer;
+              " onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
                 <input type="checkbox" id="project-tab-${
                   tab.originalIndex
                 }" class="tab-checkbox" data-tab-index="${
-                  tab.originalIndex
-                }" checked>
-                <label for="project-tab-${
-                  tab.originalIndex
-                }" style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                  <img src="${
-                    tab.favIconUrl ||
-                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
-                  }" 
-                       style="width: 16px; height: 16px;" alt="">
-                  <span class="selection-tab-title" style="flex: 1;">${
-                    tab.title
-                  }</span>
-                  <button class="tab-action-btn close remove-from-project" title="Remove from project" data-tab-index="${
-                    tab.originalIndex
-                  }">
+                        tab.originalIndex
+                      }" checked style="margin-right: 12px;">
+                <label for="project-tab-${tab.originalIndex}" style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  flex: 1;
+                  cursor: pointer;
+                  min-width: 0;
+                ">
+                  <img class="tab-favicon" src="${this.getSafeFaviconUrl(
+                    tab.url,
+                    tab.favIconUrl
+                  )}">
+                  <div class="tab-info" style="flex: 1; min-width: 0;">
+                    <div class="tab-title">${this.escapeHtml(tab.title)}</div>
+                    <div class="tab-url">${this.cleanUrl(tab.url)}</div>
+                  </div>
+                </label>
+                ${
+                  project.window.groups.length > 0
+                    ? `
+                  <button class="tab-action-btn move-to-group" title="Move to group" data-tab-index="${tab.originalIndex}" style="opacity: 0.6; transition: opacity 0.2s; margin-right: 4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      <path d="M10 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2zm10 0V8a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2z"/>
                     </svg>
                   </button>
-                </label>
+                `
+                    : ""
+                }
+                <button class="tab-action-btn remove-from-project" title="Remove from project" data-tab-index="${
+                  tab.originalIndex
+                }" style="opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
               </div>
             `
-              )
-              .join("")}
+                    )
+                    .join("")
+            }
           </div>
         </div>
       `;
@@ -2498,6 +3158,81 @@ class PowerProjectSidebar {
         }
       });
     });
+
+    // Add event listeners for move to group buttons
+    container.querySelectorAll(".move-to-group").forEach((button) => {
+      button.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const tabIndex = button.dataset.tabIndex;
+        this.showMoveToProjectGroupMenu(tabIndex, project);
+      });
+    });
+  }
+
+  showMoveToProjectGroupMenu(tabIndex, project) {
+    const tab = project.window.tabs[tabIndex];
+    if (!tab || !project.window.groups || project.window.groups.length === 0)
+      return;
+
+    // Create a dropdown menu
+    const menu = document.createElement("div");
+    menu.className = "context-menu";
+    menu.style.position = "absolute";
+    menu.style.display = "block";
+
+    // Position it near the button
+    const button = event.target;
+    const rect = button.getBoundingClientRect();
+    menu.style.left = `${rect.left}px`;
+    menu.style.top = `${rect.bottom}px`;
+
+    // Add groups to menu
+    let menuHTML = "";
+    project.window.groups.forEach((group) => {
+      menuHTML += `
+        <div class="context-item" data-group-id="${
+          group.id
+        }" data-tab-index="${tabIndex}">
+          <span class="group-color" style="background-color: ${
+            group.color
+          }; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+          ${group.title || "Unnamed Group"}
+        </div>
+      `;
+    });
+
+    menu.innerHTML = menuHTML;
+    menu.id = "project-move-to-group-menu";
+    document.body.appendChild(menu);
+
+    // Add click handlers
+    menu.querySelectorAll(".context-item").forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.preventDefault();
+        const groupId = parseInt(item.dataset.groupId);
+        const tabIdx = parseInt(item.dataset.tabIndex);
+
+        // Update the tab's groupId
+        project.window.tabs[tabIdx].groupId = groupId;
+
+        // Re-render the selection UI
+        this.renderTabSelectionForEdit(project);
+
+        // Remove the menu
+        menu.remove();
+      });
+    });
+
+    // Close menu when clicking elsewhere
+    setTimeout(() => {
+      document.addEventListener("click", function closeMenu(e) {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener("click", closeMenu);
+        }
+      });
+    }, 0);
   }
 
   async clearProjectTabs(projectId) {
