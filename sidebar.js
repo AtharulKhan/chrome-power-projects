@@ -387,6 +387,9 @@ class PowerProjectSidebar {
       if (e.target.closest(".tab-item")) {
         e.preventDefault();
         this.showContextMenu(e, e.target.closest(".tab-item"));
+      } else if (e.target.closest(".saved-group")) {
+        e.preventDefault();
+        this.showSavedGroupContextMenu(e, e.target.closest(".saved-group"));
       }
     });
 
@@ -530,11 +533,8 @@ class PowerProjectSidebar {
         this.closeModals();
       });
 
-    document
-      .getElementById("create-project-btn")
-      .addEventListener("click", () => {
-        this.createProjectFromSelection();
-      });
+    // Don't add a click listener here - it will be set dynamically
+    // based on whether we're creating or editing a project
 
     // Add to Project Modal event listeners
     document
@@ -964,6 +964,59 @@ class PowerProjectSidebar {
 
   hideContextMenu() {
     document.getElementById("context-menu").style.display = "none";
+    document.getElementById("saved-group-context-menu").style.display = "none";
+  }
+
+  showSavedGroupContextMenu(event, savedGroupElement) {
+    const menu = document.getElementById("saved-group-context-menu");
+    const savedGroupId = savedGroupElement.dataset.savedGroupId;
+
+    menu.style.display = "block";
+    menu.style.left = event.pageX + "px";
+    menu.style.top = event.pageY + "px";
+
+    // Add click handlers for context menu items
+    menu.querySelectorAll(".context-item").forEach((item) => {
+      item.onclick = (e) => {
+        e.preventDefault();
+        const action = item.dataset.action;
+        this.handleSavedGroupContextMenuAction(action, savedGroupId);
+        this.hideContextMenu();
+      };
+    });
+  }
+
+  handleSavedGroupContextMenuAction(action, savedGroupId) {
+    switch (action) {
+      case "restore-current":
+        this.restoreSavedGroup(savedGroupId, false);
+        break;
+      case "restore-new":
+        this.restoreSavedGroup(savedGroupId, true);
+        break;
+      case "add-to-project":
+        this.addSavedGroupToProject(savedGroupId);
+        break;
+      case "edit-name":
+        this.editSavedGroupName(savedGroupId);
+        break;
+      case "delete-project":
+        this.confirmDeleteSavedGroup(savedGroupId);
+        break;
+    }
+  }
+
+  async confirmDeleteSavedGroup(savedGroupId) {
+    const savedGroup = this.savedGroups.find((g) => g.id === savedGroupId);
+    if (!savedGroup) return;
+
+    if (
+      confirm(
+        `Are you sure you want to delete the project "${savedGroup.name}"?`
+      )
+    ) {
+      await this.deleteSavedGroup(savedGroupId);
+    }
   }
 
   handleContextMenuAction(action, tabId) {
@@ -1475,10 +1528,7 @@ class PowerProjectSidebar {
             .map(
               (tab) => `
             <div class="saved-tab-item" data-tab-url="${tab.url}">
-              <img class="tab-favicon" src="chrome://favicon/size/16@1x/${
-                tab.url
-              }" 
-                   onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\'><path fill=\\' %23999\\' d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z\\'/></svg>'"
+              <img class="tab-favicon" src="${this.getSafeFaviconUrl(tab.url)}" 
                    alt="">
               <span class="saved-tab-title">${this.escapeHtml(tab.title)}</span>
             </div>
@@ -1496,6 +1546,11 @@ class PowerProjectSidebar {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  getSafeFaviconUrl(url) {
+    // Always return default icon for now to avoid edge:// errors
+    return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>';
   }
 
   toggleSavedGroupCollapse(groupId) {
@@ -1785,8 +1840,7 @@ class PowerProjectSidebar {
             return `
           <div class="bookmark-item" data-bookmark-url="${bookmark.url}">
             <img class="tab-favicon" 
-                 src="${faviconUrl}" 
-                 onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\'><path fill=\\' %23999\\' d=\\'M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z\\'/></svg>'"
+                 src="${this.getSafeFaviconUrl(bookmark.url)}" 
                  alt="">
             <div class="tab-info">
               <div class="tab-title">${bookmark.title}</div>
@@ -1928,6 +1982,13 @@ class PowerProjectSidebar {
   async switchToProject(projectId) {
     const project = this.projects.find((p) => p.id === projectId);
     if (!project) return;
+
+    // Show confirmation dialog
+    const userConfirmed = confirm(
+      `Do you want to open the project "${project.name}" in this window?\n\nThis will add ${project.window.tabs.length} tabs to your current window.`
+    );
+
+    if (!userConfirmed) return;
 
     try {
       // Get the current window
@@ -2176,6 +2237,45 @@ class PowerProjectSidebar {
     // Store the project ID for updating
     this.editingProjectId = projectId;
 
+    // Add a "Clear All Tabs" button if it doesn't exist
+    let clearTabsBtn = document.getElementById("clear-project-tabs-btn");
+    if (!clearTabsBtn) {
+      clearTabsBtn = document.createElement("button");
+      clearTabsBtn.id = "clear-project-tabs-btn";
+      clearTabsBtn.className = "secondary-button";
+      clearTabsBtn.textContent = "Clear All Tabs";
+      clearTabsBtn.style.marginLeft = "10px";
+      clearTabsBtn.onclick = () => this.clearProjectTabs(projectId);
+
+      // Insert after the Update Project button
+      createBtn.parentNode.insertBefore(clearTabsBtn, createBtn.nextSibling);
+    } else {
+      clearTabsBtn.style.display = "inline-block";
+      clearTabsBtn.onclick = () => this.clearProjectTabs(projectId);
+    }
+
+    // Add a "Delete This Project" button if it doesn't exist
+    let deleteProjectBtn = document.getElementById("delete-project-btn");
+    if (!deleteProjectBtn) {
+      deleteProjectBtn = document.createElement("button");
+      deleteProjectBtn.id = "delete-project-btn";
+      deleteProjectBtn.className = "secondary-button";
+      deleteProjectBtn.textContent = "Delete This Project";
+      deleteProjectBtn.style.marginLeft = "10px";
+      deleteProjectBtn.style.backgroundColor = "#ef4444";
+      deleteProjectBtn.style.color = "white";
+      deleteProjectBtn.onclick = () => this.deleteProjectFromEdit(projectId);
+
+      // Insert after the Clear All Tabs button
+      clearTabsBtn.parentNode.insertBefore(
+        deleteProjectBtn,
+        clearTabsBtn.nextSibling
+      );
+    } else {
+      deleteProjectBtn.style.display = "inline-block";
+      deleteProjectBtn.onclick = () => this.deleteProjectFromEdit(projectId);
+    }
+
     // Render tabs with pre-selected ones from the project
     await this.renderTabSelectionForEdit(project);
 
@@ -2185,56 +2285,77 @@ class PowerProjectSidebar {
 
   async renderTabSelectionForEdit(project) {
     const container = document.getElementById("tab-selection-container");
-    const currentWindow = await chrome.windows.getCurrent({ populate: true });
-    const groups = await chrome.tabGroups.query({ windowId: currentWindow.id });
 
-    // Create a set of URLs from the project for easy checking
-    const projectTabUrls = new Set(project.window.tabs.map((tab) => tab.url));
+    // Group project tabs by their groupId
+    const groupedTabs = new Map();
+    const ungroupedTabs = [];
 
-    let html = "";
+    project.window.tabs.forEach((tab, index) => {
+      // Store the original index for later use
+      tab.originalIndex = index;
+
+      if (
+        tab.groupId &&
+        tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE &&
+        tab.groupId !== -1
+      ) {
+        if (!groupedTabs.has(tab.groupId)) {
+          groupedTabs.set(tab.groupId, []);
+        }
+        groupedTabs.get(tab.groupId).push(tab);
+      } else {
+        ungroupedTabs.push(tab);
+      }
+    });
+
+    let html =
+      '<div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">Select tabs to keep in this project. Unchecked tabs will be removed.</div>';
 
     // Render groups with their tabs
-    groups.forEach((group) => {
-      const groupTabs = currentWindow.tabs.filter(
-        (tab) => tab.groupId === group.id
-      );
-      if (groupTabs.length > 0) {
-        const hasSelectedTabs = groupTabs.some((tab) =>
-          projectTabUrls.has(tab.url)
-        );
+    project.window.groups.forEach((group) => {
+      const tabs = groupedTabs.get(group.id) || [];
+      if (tabs.length > 0) {
         html += `
           <div class="selection-group">
             <div class="selection-group-header">
               <input type="checkbox" id="group-${
                 group.id
-              }" class="group-checkbox" data-group-id="${group.id}" ${
-          hasSelectedTabs ? "checked" : ""
-        }>
+              }" class="group-checkbox" data-group-id="${group.id}" checked>
               <label for="group-${group.id}" class="selection-group-title">
                 <span class="group-color" style="background-color: ${
                   group.color
                 }; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
-                ${group.title || "Unnamed Group"} (${groupTabs.length})
+                ${group.title || "Unnamed Group"} (${tabs.length})
               </label>
             </div>
             <div class="selection-tabs">
-              ${groupTabs
+              ${tabs
                 .map(
                   (tab) => `
                 <div class="selection-tab">
-                  <input type="checkbox" id="tab-${
-                    tab.id
-                  }" class="tab-checkbox" data-tab-id="${
-                    tab.id
-                  }" data-group-id="${group.id}" ${
-                    projectTabUrls.has(tab.url) ? "checked" : ""
-                  }>
-                  <label for="tab-${tab.id}">
+                  <input type="checkbox" id="project-tab-${
+                    tab.originalIndex
+                  }" class="tab-checkbox" data-tab-index="${
+                    tab.originalIndex
+                  }" data-group-id="${group.id}" checked>
+                  <label for="project-tab-${
+                    tab.originalIndex
+                  }" style="display: flex; align-items: center; gap: 8px; flex: 1;">
                     <img src="${
                       tab.favIconUrl ||
                       'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
-                    }" alt="">
-                    <span class="selection-tab-title">${tab.title}</span>
+                    }" 
+                         style="width: 16px; height: 16px;" alt="">
+                    <span class="selection-tab-title" style="flex: 1;">${
+                      tab.title
+                    }</span>
+                    <button class="tab-action-btn close remove-from-project" title="Remove from project" data-tab-index="${
+                      tab.originalIndex
+                    }">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                    </button>
                   </label>
                 </div>
               `
@@ -2247,19 +2368,11 @@ class PowerProjectSidebar {
     });
 
     // Render ungrouped tabs
-    const ungroupedTabs = currentWindow.tabs.filter(
-      (tab) => tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
-    );
     if (ungroupedTabs.length > 0) {
-      const hasSelectedTabs = ungroupedTabs.some((tab) =>
-        projectTabUrls.has(tab.url)
-      );
       html += `
         <div class="selection-group">
           <div class="selection-group-header">
-            <input type="checkbox" id="ungrouped" class="group-checkbox" data-group-id="ungrouped" ${
-              hasSelectedTabs ? "checked" : ""
-            }>
+            <input type="checkbox" id="ungrouped" class="group-checkbox" data-group-id="ungrouped" checked>
             <label for="ungrouped" class="selection-group-title">
               Ungrouped Tabs (${ungroupedTabs.length})
             </label>
@@ -2269,17 +2382,29 @@ class PowerProjectSidebar {
               .map(
                 (tab) => `
               <div class="selection-tab">
-                <input type="checkbox" id="tab-${
-                  tab.id
-                }" class="tab-checkbox" data-tab-id="${tab.id}" ${
-                  projectTabUrls.has(tab.url) ? "checked" : ""
-                }>
-                <label for="tab-${tab.id}">
+                <input type="checkbox" id="project-tab-${
+                  tab.originalIndex
+                }" class="tab-checkbox" data-tab-index="${
+                  tab.originalIndex
+                }" checked>
+                <label for="project-tab-${
+                  tab.originalIndex
+                }" style="display: flex; align-items: center; gap: 8px; flex: 1;">
                   <img src="${
                     tab.favIconUrl ||
                     'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23999" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>'
-                  }" alt="">
-                  <span class="selection-tab-title">${tab.title}</span>
+                  }" 
+                       style="width: 16px; height: 16px;" alt="">
+                  <span class="selection-tab-title" style="flex: 1;">${
+                    tab.title
+                  }</span>
+                  <button class="tab-action-btn close remove-from-project" title="Remove from project" data-tab-index="${
+                    tab.originalIndex
+                  }">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
                 </label>
               </div>
             `
@@ -2300,7 +2425,7 @@ class PowerProjectSidebar {
         container
           .querySelectorAll(
             groupId === "ungrouped"
-              ? ".tab-checkbox:not([data-group-id])"
+              ? `.tab-checkbox:not([data-group-id])`
               : `.tab-checkbox[data-group-id="${groupId}"]`
           )
           .forEach((tabCheckbox) => {
@@ -2308,6 +2433,44 @@ class PowerProjectSidebar {
           });
       });
     });
+
+    // Add event listeners for remove buttons
+    container.querySelectorAll(".remove-from-project").forEach((button) => {
+      button.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const tabIndex = button.dataset.tabIndex;
+        const checkbox = document.getElementById(`project-tab-${tabIndex}`);
+        if (checkbox) {
+          checkbox.checked = false;
+        }
+      });
+    });
+  }
+
+  async clearProjectTabs(projectId) {
+    const project = this.projects.find((p) => p.id === projectId);
+    if (!project) return;
+
+    const confirmMessage = `Are you sure you want to clear all tabs from the project "${project.name}"?\n\nThis will remove all ${project.window.tabs.length} tabs from the project.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    // Clear all tabs and groups from the project
+    project.window.tabs = [];
+    project.window.groups = [];
+
+    await this.saveProjects();
+
+    // Update the UI to show no tabs selected
+    document.querySelectorAll(".tab-checkbox").forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+    document.querySelectorAll(".group-checkbox").forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+
+    alert(`All tabs have been cleared from the project "${project.name}".`);
   }
 
   async updateProjectFromSelection() {
@@ -2317,57 +2480,63 @@ class PowerProjectSidebar {
       return;
     }
 
-    const selectedTabs = [];
+    // Get selected tab indices from the project's tabs
+    const selectedTabIndices = [];
     document.querySelectorAll(".tab-checkbox:checked").forEach((checkbox) => {
-      selectedTabs.push(parseInt(checkbox.dataset.tabId));
+      selectedTabIndices.push(parseInt(checkbox.dataset.tabIndex));
     });
 
-    if (selectedTabs.length === 0) {
+    if (selectedTabIndices.length === 0) {
       alert("Please select at least one tab");
       return;
     }
-
-    const currentWindow = await chrome.windows.getCurrent({ populate: true });
-    const groups = await chrome.tabGroups.query({ windowId: currentWindow.id });
 
     // Find and update the project
     const project = this.projects.find((p) => p.id === this.editingProjectId);
     if (!project) return;
 
-    project.name = projectName;
-    project.window = {
-      tabs: currentWindow.tabs
-        .filter((tab) => selectedTabs.includes(tab.id))
-        .map((tab) => ({
-          url: tab.url,
-          title: tab.title,
-          groupId: tab.groupId,
-          pinned: tab.pinned,
-          index: tab.index,
-        })),
-      groups: groups
-        .filter((group) =>
-          currentWindow.tabs.some(
-            (tab) => selectedTabs.includes(tab.id) && tab.groupId === group.id
-          )
+    // Filter tabs based on selected indices
+    const newTabs = project.window.tabs.filter((tab, index) =>
+      selectedTabIndices.includes(index)
+    );
+
+    // Get unique group IDs from remaining tabs
+    const remainingGroupIds = new Set(
+      newTabs
+        .filter(
+          (tab) =>
+            tab.groupId &&
+            tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE &&
+            tab.groupId !== -1
         )
-        .map((group) => ({
-          id: group.id,
-          title: group.title,
-          color: group.color,
-          collapsed: group.collapsed,
-        })),
-    };
+        .map((tab) => tab.groupId)
+    );
+
+    // Filter groups to only include those with remaining tabs
+    const newGroups = project.window.groups.filter((group) =>
+      remainingGroupIds.has(group.id)
+    );
+
+    // Update the project
+    project.name = projectName;
+    project.window.tabs = newTabs;
+    project.window.groups = newGroups;
 
     await this.saveProjects();
     this.renderProjects();
     this.closeModals();
 
-    // Reset the button
+    // Reset the button and hide clear tabs button
     const createBtn = document.getElementById("create-project-btn");
     createBtn.textContent = "Create Project";
     createBtn.onclick = () => this.createProjectFromSelection();
     this.editingProjectId = null;
+
+    // Hide the clear tabs button
+    const clearTabsBtn = document.getElementById("clear-project-tabs-btn");
+    if (clearTabsBtn) {
+      clearTabsBtn.style.display = "none";
+    }
   }
 
   async openProjectFromModal(projectId) {
@@ -2384,9 +2553,63 @@ class PowerProjectSidebar {
     }
   }
 
+  async deleteProjectFromEdit(projectId) {
+    const project = this.projects.find((p) => p.id === projectId);
+    if (!project) return;
+
+    if (
+      confirm(`Are you sure you want to delete the project "${project.name}"?`)
+    ) {
+      this.projects = this.projects.filter((p) => p.id !== projectId);
+      await this.saveProjects();
+      this.renderProjects();
+      this.closeModals();
+
+      // Clean up the edit modal state
+      const createBtn = document.getElementById("create-project-btn");
+      createBtn.textContent = "Create Project";
+      createBtn.onclick = () => this.createProjectFromSelection();
+      this.editingProjectId = null;
+
+      // Hide the buttons
+      const clearTabsBtn = document.getElementById("clear-project-tabs-btn");
+      if (clearTabsBtn) {
+        clearTabsBtn.style.display = "none";
+      }
+      const deleteProjectBtn = document.getElementById("delete-project-btn");
+      if (deleteProjectBtn) {
+        deleteProjectBtn.style.display = "none";
+      }
+    }
+  }
+
   openNewProjectModal() {
     this.closeModals();
     document.getElementById("new-project-modal").style.display = "flex";
+
+    // Hide the clear tabs button if it exists (from previous edit mode)
+    const clearTabsBtn = document.getElementById("clear-project-tabs-btn");
+    if (clearTabsBtn) {
+      clearTabsBtn.style.display = "none";
+    }
+
+    // Hide the delete project button if it exists (from previous edit mode)
+    const deleteProjectBtn = document.getElementById("delete-project-btn");
+    if (deleteProjectBtn) {
+      deleteProjectBtn.style.display = "none";
+    }
+
+    // Reset the create button
+    const createBtn = document.getElementById("create-project-btn");
+    createBtn.textContent = "Create Project";
+    createBtn.onclick = () => this.createProjectFromSelection();
+
+    // Clear the project name field
+    document.getElementById("new-project-name").value = "";
+
+    // Clear the editing project ID
+    this.editingProjectId = null;
+
     this.renderTabSelection();
   }
 
@@ -2678,15 +2901,89 @@ class PowerProjectSidebar {
     document.getElementById("add-to-project-modal").style.display = "flex";
     this.resetAddToProjectModal();
 
-    // Populate project selection
-    const select = document.getElementById("project-select");
-    select.innerHTML = this.projects
+    // Store selected project
+    this.selectedProjectForAdd = null;
+
+    // Render all projects initially
+    this.renderProjectsForSelection();
+
+    // Set up search functionality
+    const searchInput = document.getElementById("project-search-add");
+    searchInput.value = "";
+    searchInput.addEventListener("input", (e) => {
+      this.renderProjectsForSelection(e.target.value.toLowerCase());
+    });
+  }
+
+  renderProjectsForSelection(searchQuery = "") {
+    const container = document.getElementById("project-select-container");
+
+    // Filter projects based on search
+    let filteredProjects = this.projects;
+    if (searchQuery) {
+      filteredProjects = this.projects.filter((project) =>
+        project.name.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    if (filteredProjects.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 12px; text-align: center; color: #6b7280; font-size: 13px;">
+          No projects found
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filteredProjects
       .map(
         (project) => `
-      <option value="${project.id}">${project.emoji} ${project.name}</option>
+      <div class="project-select-item" data-project-id="${project.id}" style="
+        padding: 10px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+        ${
+          this.selectedProjectForAdd === project.id
+            ? "background: #e0e7ff;"
+            : ""
+        }
+      ">
+        <span style="font-size: 16px;">${project.emoji || "📁"}</span>
+        <span style="flex: 1; font-size: 14px; color: #374151;">${
+          project.name
+        }</span>
+        ${
+          this.selectedProjectForAdd === project.id
+            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="#4f46e5"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'
+            : ""
+        }
+      </div>
     `
       )
       .join("");
+
+    // Add click handlers
+    container.querySelectorAll(".project-select-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        this.selectedProjectForAdd = item.dataset.projectId;
+        this.renderProjectsForSelection(searchQuery);
+      });
+
+      item.addEventListener("mouseenter", () => {
+        if (this.selectedProjectForAdd !== item.dataset.projectId) {
+          item.style.background = "#f3f4f6";
+        }
+      });
+
+      item.addEventListener("mouseleave", () => {
+        if (this.selectedProjectForAdd !== item.dataset.projectId) {
+          item.style.background = "";
+        }
+      });
+    });
   }
 
   closeAddToProjectModal() {
@@ -2713,8 +3010,14 @@ class PowerProjectSidebar {
   }
 
   async confirmAddToProject() {
-    const projectId = document.getElementById("project-select").value;
-    const project = this.projects.find((p) => p.id === projectId);
+    if (!this.selectedProjectForAdd) {
+      alert("Please select a project");
+      return;
+    }
+
+    const project = this.projects.find(
+      (p) => p.id === this.selectedProjectForAdd
+    );
 
     if (!project || !this.pendingAddToProject) return;
 

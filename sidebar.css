@@ -1474,6 +1474,23 @@ body {
   background: #e5e7eb;
 }
 
+.secondary-button {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+}
+
+.secondary-button:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
 .btn-danger {
   background: #ef4444;
   color: white;

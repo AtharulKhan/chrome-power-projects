@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Edit Project Fix</title>
+    <link rel="stylesheet" href="sidebar.css" />
+    <style>
+      body {
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-button {
+        margin: 5px;
+        padding: 10px 20px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .test-button:hover {
+        background: #45a049;
+      }
+      #test-log {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .log-entry {
+        margin: 2px 0;
+        padding: 2px 5px;
+      }
+      .log-success {
+        color: green;
+      }
+      .log-error {
+        color: red;
+      }
+      .log-info {
+        color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test Edit Project Fix</h1>
+
+    <div class="test-section">
+      <h2>Test Scenario</h2>
+      <p>
+        Testing the fix for: "When editing a project and unchecking tabs, it
+        creates 2 new empty projects instead of just removing the unchecked
+        tabs"
+      </p>
+
+      <button class="test-button" onclick="setupTest()">Setup Test Data</button>
+      <button class="test-button" onclick="testEditProject()">
+        Test Edit Project
+      </button>
+      <button class="test-button" onclick="clearTestData()">
+        Clear Test Data
+      </button>
+    </div>
+
+    <div class="test-section">
+      <h2>Projects</h2>
+      <div id="projects-container"></div>
+    </div>
+
+    <!-- Modal HTML from sidebar.html -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modal-title">Create New Project</h2>
+        <input type="text" id="project-name" placeholder="Enter project name" />
+        <div id="tab-list"></div>
+        <button id="create-project-btn">Create Project</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="test-log"></div>
+    </div>
+
+    <script>
+      // Mock Chrome API
+      const mockStorage = {
+        projects: [],
+      };
+
+      const mockTabs = [
+        {
+          id: 1,
+          title: "Google",
+          url: "https://google.com",
+          favIconUrl: "https://google.com/favicon.ico",
+        },
+        {
+          id: 2,
+          title: "GitHub",
+          url: "https://github.com",
+          favIconUrl: "https://github.com/favicon.ico",
+        },
+        {
+          id: 3,
+          title: "Stack Overflow",
+          url: "https://stackoverflow.com",
+          favIconUrl: "https://stackoverflow.com/favicon.ico",
+        },
+        {
+          id: 4,
+          title: "MDN Web Docs",
+          url: "https://developer.mozilla.org",
+          favIconUrl: "https://developer.mozilla.org/favicon.ico",
+        },
+      ];
+
+      window.chrome = {
+        storage: {
+          local: {
+            get: (keys, callback) => {
+              const result = {};
+              if (Array.isArray(keys)) {
+                keys.forEach((key) => {
+                  result[key] =
+                    mockStorage[key] || (key === "projects" ? [] : null);
+                });
+              } else {
+                result[keys] =
+                  mockStorage[keys] || (keys === "projects" ? [] : null);
+              }
+              callback(result);
+            },
+            set: (data, callback) => {
+              Object.assign(mockStorage, data);
+              if (callback) callback();
+              log("Storage updated", "info");
+              displayProjects();
+            },
+          },
+        },
+        tabs: {
+          query: (options, callback) => {
+            callback(mockTabs);
+          },
+        },
+        runtime: {
+          sendMessage: (message, callback) => {
+            log(`Message sent: ${message.action}`, "info");
+            if (callback) callback();
+          },
+        },
+      };
+
+      // Logging function
+      function log(message, type = "info") {
+        const logDiv = document.getElementById("test-log");
+        const entry = document.createElement("div");
+        entry.className = `log-entry log-${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logDiv.appendChild(entry);
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      // Setup test data
+      function setupTest() {
+        mockStorage.projects = [
+          {
+            id: "test-project-1",
+            name: "Test Project 1",
+            tabs: [
+              { id: 1, title: "Google", url: "https://google.com" },
+              { id: 2, title: "GitHub", url: "https://github.com" },
+              {
+                id: 3,
+                title: "Stack Overflow",
+                url: "https://stackoverflow.com",
+              },
+            ],
+            createdAt: Date.now(),
+          },
+        ];
+        log("Test data setup complete", "success");
+        displayProjects();
+      }
+
+      // Display projects
+      function displayProjects() {
+        const container = document.getElementById("projects-container");
+        container.innerHTML = "";
+
+        mockStorage.projects.forEach((project) => {
+          const projectDiv = document.createElement("div");
+          projectDiv.style.cssText =
+            "margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px;";
+          projectDiv.innerHTML = `
+                    <h3>${project.name}</h3>
+                    <p>ID: ${project.id}</p>
+                    <p>Tabs: ${project.tabs.length}</p>
+                    <ul>
+                        ${project.tabs
+                          .map((tab) => `<li>${tab.title}</li>`)
+                          .join("")}
+                    </ul>
+                    <button onclick="editProject('${
+                      project.id
+                    }')" style="margin-right: 10px;">Edit</button>
+                    <button onclick="deleteProject('${
+                      project.id
+                    }')">Delete</button>
+                `;
+          container.appendChild(projectDiv);
+        });
+
+        log(`Displaying ${mockStorage.projects.length} projects`, "info");
+      }
+
+      // Clear test data
+      function clearTestData() {
+        mockStorage.projects = [];
+        log("Test data cleared", "success");
+        displayProjects();
+      }
+
+      // Test edit project
+      function testEditProject() {
+        if (mockStorage.projects.length === 0) {
+          log("No projects to edit. Please setup test data first.", "error");
+          return;
+        }
+
+        const projectId = mockStorage.projects[0].id;
+        log(`Starting edit test for project: ${projectId}`, "info");
+        editProject(projectId);
+      }
+
+      // Load the actual sidebar.js script
+      const script = document.createElement("script");
+      script.src = "sidebar.js";
+      script.onload = () => {
+        log("sidebar.js loaded successfully", "success");
+        displayProjects();
+      };
+      script.onerror = () => {
+        log("Failed to load sidebar.js", "error");
+      };
+      document.body.appendChild(script);
+
+      // Override some functions for testing
+      window.addEventListener("load", () => {
+        // Override displayProjects to add logging
+        const originalDisplayProjects = window.displayProjects;
+        window.displayProjects = function () {
+          log("displayProjects called", "info");
+          if (originalDisplayProjects) {
+            originalDisplayProjects();
+          }
+          displayProjects(); // Call our test version
+        };
+
+        // Override updateProjectFromSelection to add logging
+        const originalUpdateProject = window.updateProjectFromSelection;
+        window.updateProjectFromSelection = function () {
+          log("updateProjectFromSelection called", "info");
+          const projectsBefore = mockStorage.projects.length;
+
+          if (originalUpdateProject) {
+            originalUpdateProject();
+          }
+
+          setTimeout(() => {
+            const projectsAfter = mockStorage.projects.length;
+            if (projectsAfter > projectsBefore) {
+              log(
+                `WARNING: ${
+                  projectsAfter - projectsBefore
+                } new projects created!`,
+                "error"
+              );
+            } else {
+              log(
+                "Project updated successfully without creating duplicates",
+                "success"
+              );
+            }
+          }, 100);
+        };
+      });
+    </script>
+  </body>
+</html>

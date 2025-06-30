@@ -82,6 +82,13 @@
    - This provides a comprehensive backup and restore solution.
 
 5. **Non-Destructive Project Opening**:
+
    - Modified project opening behavior to preserve existing tabs
    - Projects now open in the current window alongside existing tabs
    - Removed the destructive tab deletion that was happening before
+
+6. **Delete Project via Context Menu**:
+   - Added right-click context menu for saved groups/projects
+   - Includes "Delete Project" option with confirmation dialog
+   - Context menu also includes: Restore in Current/New Window, Add to Project, Edit Name
+   - Follows the same pattern as tab context menus for consistency

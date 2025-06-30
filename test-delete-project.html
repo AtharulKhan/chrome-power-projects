@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Delete Project Feature</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .test-section {
+        background: white;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+      }
+      h2 {
+        color: #666;
+        font-size: 18px;
+      }
+      .feature-list {
+        list-style-type: none;
+        padding: 0;
+      }
+      .feature-list li {
+        padding: 10px;
+        margin: 5px 0;
+        background: #f8f9fa;
+        border-radius: 4px;
+        border-left: 4px solid #4caf50;
+      }
+      .test-steps {
+        background: #e8f5e9;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 10px;
+      }
+      .test-steps ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .test-steps li {
+        margin: 5px 0;
+      }
+      .code-block {
+        background: #263238;
+        color: #aed581;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+      }
+      .warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🗑️ Delete Project Feature - Test Guide</h1>
+
+    <div class="test-section">
+      <h2>✨ Feature Overview</h2>
+      <p>
+        A new "Delete Project" option has been added to the right-click context
+        menu for saved groups/projects in the Power Project Chrome Extension.
+      </p>
+
+      <ul class="feature-list">
+        <li>✅ Right-click context menu for saved groups</li>
+        <li>✅ "Delete Project" option in the context menu</li>
+        <li>✅ Confirmation dialog before deletion</li>
+        <li>✅ Proper cleanup and UI refresh after deletion</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>🔧 Implementation Details</h2>
+      <p>The following changes were made to implement this feature:</p>
+
+      <h3>1. HTML Changes (sidebar.html)</h3>
+      <div class="code-block">
+        <!-- Saved Group Context Menu -->
+        <div
+          class="context-menu"
+          id="saved-group-context-menu"
+          style="display: none"
+        >
+          <div class="context-item" data-action="restore-current">
+            Restore in Current Window
+          </div>
+          <div class="context-item" data-action="restore-new">
+            Restore in New Window
+          </div>
+          <div class="context-item" data-action="add-to-project">
+            Add to Project
+          </div>
+          <div class="context-item" data-action="edit-name">Edit Name</div>
+          <div class="context-separator"></div>
+          <div class="context-item" data-action="delete-project">
+            Delete Project
+          </div>
+        </div>
+      </div>
+
+      <h3>2. JavaScript Changes (sidebar.js)</h3>
+      <ul>
+        <li>Added event listener for right-click on saved groups</li>
+        <li>Created <code>showSavedGroupContextMenu()</code> method</li>
+        <li>Created <code>handleSavedGroupContextMenuAction()</code> method</li>
+        <li>Created <code>confirmDeleteSavedGroup()</code> method</li>
+        <li>Updated <code>hideContextMenu()</code> to hide both menus</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>🧪 Testing Instructions</h2>
+
+      <div class="test-steps">
+        <h3>Step-by-Step Testing:</h3>
+        <ol>
+          <li>
+            <strong>Open the Extension:</strong> Click on the Power Project
+            extension icon to open the sidebar
+          </li>
+          <li>
+            <strong>Navigate to Saved Groups:</strong> Click on the "Saved
+            Groups" tab (third icon in the tab navigation)
+          </li>
+          <li>
+            <strong>Create Test Groups:</strong> If you don't have any saved
+            groups:
+            <ul>
+              <li>Go to the "Groups" tab</li>
+              <li>Click the save icon on any tab group</li>
+              <li>Enter a name for the saved group</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Right-Click Test:</strong> Right-click on any saved group in
+            the "Saved Groups" tab
+          </li>
+          <li>
+            <strong>Verify Context Menu:</strong> You should see a context menu
+            with these options:
+            <ul>
+              <li>Restore in Current Window</li>
+              <li>Restore in New Window</li>
+              <li>Add to Project</li>
+              <li>Edit Name</li>
+              <li>--- (separator) ---</li>
+              <li>Delete Project</li>
+            </ul>
+          </li>
+          <li><strong>Test Delete:</strong> Click "Delete Project"</li>
+          <li>
+            <strong>Confirm Dialog:</strong> A confirmation dialog should appear
+            asking: "Are you sure you want to delete the project '[project
+            name]'?"
+          </li>
+          <li>
+            <strong>Test Cancel:</strong> Click "Cancel" - the project should
+            remain
+          </li>
+          <li>
+            <strong>Test Confirm:</strong> Right-click again, choose "Delete
+            Project", and click "OK" - the project should be deleted
+          </li>
+        </ol>
+      </div>
+
+      <div class="warning">
+        <strong>⚠️ Note:</strong> The delete action is permanent. Once
+        confirmed, the saved group cannot be recovered unless you have a backup
+        (via the Export feature).
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Expected Behavior</h2>
+      <ul>
+        <li>
+          Context menu appears at mouse position when right-clicking a saved
+          group
+        </li>
+        <li>Context menu disappears when clicking elsewhere</li>
+        <li>Delete option shows a confirmation dialog with the project name</li>
+        <li>Canceling the dialog leaves the project intact</li>
+        <li>
+          Confirming the dialog removes the project from the list immediately
+        </li>
+        <li>The deletion persists across browser restarts</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>🐛 Troubleshooting</h2>
+      <p>If the feature isn't working as expected:</p>
+      <ol>
+        <li>
+          <strong>Reload the Extension:</strong> Go to chrome://extensions, find
+          Power Project, and click the reload button
+        </li>
+        <li>
+          <strong>Check Console:</strong> Right-click the extension sidebar,
+          choose "Inspect", and check the Console for errors
+        </li>
+        <li>
+          <strong>Clear Storage:</strong> If data seems corrupted, you can reset
+          by clearing extension storage (be sure to export first!)
+        </li>
+      </ol>
+    </div>
+  </body>
+</html>

@@ -352,6 +352,28 @@
       </div>
     </div>
 
+    <!-- Saved Group Context Menu -->
+    <div
+      class="context-menu"
+      id="saved-group-context-menu"
+      style="display: none"
+    >
+      <div class="context-item" data-action="restore-current">
+        Restore in Current Window
+      </div>
+      <div class="context-item" data-action="restore-new">
+        Restore in New Window
+      </div>
+      <div class="context-item" data-action="add-to-project">
+        Add to Project
+      </div>
+      <div class="context-item" data-action="edit-name">Edit Name</div>
+      <div class="context-separator"></div>
+      <div class="context-item" data-action="delete-project">
+        Delete Project
+      </div>
+    </div>
+
     <!-- Project Management Modal -->
     <div class="modal-overlay" id="projects-modal" style="display: none">
       <div class="modal-content">
@@ -517,18 +539,31 @@
 
           <div id="existing-project-selection" style="display: none">
             <div class="form-group">
-              <label for="project-select">Select Project:</label>
-              <select
-                id="project-select"
+              <label for="project-search-add">Search Project:</label>
+              <input
+                type="text"
+                id="project-search-add"
+                placeholder="Type to search projects..."
                 style="
                   width: 100%;
                   padding: 8px;
                   border: 1px solid #e5e7eb;
                   border-radius: 4px;
+                  margin-bottom: 8px;
+                "
+              />
+              <div
+                id="project-select-container"
+                style="
+                  max-height: 200px;
+                  overflow-y: auto;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 4px;
+                  background: white;
                 "
               >
                 <!-- Projects will be populated here -->
-              </select>
+              </div>
             </div>
             <div class="modal-actions">
               <button class="btn btn-secondary" id="cancel-add-to-project">
