@@ -762,7 +762,7 @@ class PowerProjectSidebar {
     }
   }
 
-  filterAndRender() {
+  async filterAndRender() {
     let filteredTabs = [...this.tabs];
 
     // Apply search filter
@@ -777,7 +777,7 @@ class PowerProjectSidebar {
     // Apply sorting
     filteredTabs = this.sortTabs(filteredTabs);
 
-    this.renderTabs(filteredTabs);
+    await this.renderTabs(filteredTabs);
   }
 
   sortTabs(tabs) {
@@ -799,41 +799,41 @@ class PowerProjectSidebar {
     }
   }
 
-  render() {
+  async render() {
     this.renderGroups();
-    this.filterAndRender();
+    await this.filterAndRender();
     this.renderSavedGroups();
   }
 
-  renderGroups() {
+  async renderGroups() {
     const container = document.getElementById("groups-content");
 
-    // Group tabs by window
-    const windowGroups = new Map();
-    this.tabs.forEach((tab) => {
-      if (!windowGroups.has(tab.windowId)) {
-        windowGroups.set(tab.windowId, []);
+    // Get all windows
+    const windows = await chrome.windows.getAll();
+
+    // Create a map of windowId to groups
+    const windowToGroups = new Map();
+
+    // Group the groups by their windowId
+    this.groups.forEach((group) => {
+      if (!windowToGroups.has(group.windowId)) {
+        windowToGroups.set(group.windowId, []);
       }
-      windowGroups.get(tab.windowId).push(tab);
+      windowToGroups.get(group.windowId).push(group);
     });
 
     // Render groups organized by window
     let html = "";
     let windowIndex = 0;
 
-    for (const [windowId, windowTabs] of windowGroups) {
-      windowIndex++;
-      const windowGroupTabs = windowTabs.filter(
-        (tab) => tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE
-      );
-      const groupsInWindow = this.groups.filter((group) =>
-        windowGroupTabs.some((tab) => tab.groupId === group.id)
-      );
+    for (const window of windows) {
+      const groupsInWindow = windowToGroups.get(window.id) || [];
 
       if (groupsInWindow.length > 0) {
-        const isWindowCollapsed = this.collapsedWindows.has(windowId);
+        windowIndex++;
+        const isWindowCollapsed = this.collapsedWindows.has(window.id);
         html += `
-          <div class="window-section" data-window-id="${windowId}">
+          <div class="window-section" data-window-id="${window.id}">
             <h4 class="window-header" style="padding: 8px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
               <span>Window ${windowIndex}</span>
               <svg class="collapse-icon ${
@@ -847,7 +847,7 @@ class PowerProjectSidebar {
             }">
             ${groupsInWindow
               .map((group) => {
-                const groupTabs = windowTabs.filter(
+                const groupTabs = this.tabs.filter(
                   (tab) => tab.groupId === group.id
                 );
                 return `
@@ -914,7 +914,7 @@ class PowerProjectSidebar {
     }
   }
 
-  renderTabs(tabs) {
+  async renderTabs(tabs) {
     const container = document.getElementById("tabs-content");
 
     // Filter out tabs that are in groups
@@ -928,9 +928,49 @@ class PowerProjectSidebar {
       return;
     }
 
-    container.innerHTML = ungroupedTabs
-      .map((tab) => this.createTabHTML(tab))
-      .join("");
+    // Get all windows
+    const windows = await chrome.windows.getAll();
+
+    // Group ungrouped tabs by window
+    const windowToTabs = new Map();
+    ungroupedTabs.forEach((tab) => {
+      if (!windowToTabs.has(tab.windowId)) {
+        windowToTabs.set(tab.windowId, []);
+      }
+      windowToTabs.get(tab.windowId).push(tab);
+    });
+
+    // Render tabs organized by window
+    let html = "";
+    let windowIndex = 0;
+
+    for (const window of windows) {
+      const tabsInWindow = windowToTabs.get(window.id) || [];
+
+      if (tabsInWindow.length > 0) {
+        windowIndex++;
+        const isWindowCollapsed = this.collapsedWindows.has(window.id);
+        html += `
+          <div class="window-section" data-window-id="${window.id}">
+            <h4 class="window-header" style="padding: 8px 20px; margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+              <span>Window ${windowIndex}</span>
+              <svg class="collapse-icon ${
+                isWindowCollapsed ? "collapsed" : ""
+              }" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+              </svg>
+            </h4>
+            <div class="window-tabs" style="display: ${
+              isWindowCollapsed ? "none" : "block"
+            }">
+              ${tabsInWindow.map((tab) => this.createTabHTML(tab)).join("")}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    container.innerHTML = html;
   }
 
   createTabHTML(tab) {

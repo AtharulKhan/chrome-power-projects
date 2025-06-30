@@ -77,6 +77,34 @@ Added comprehensive search filtering functionality:
    - Visual feedback on hover
    - Maintains search query while filtering results
 
+### Task 4: Group Tabs by Window in All Tabs Section - COMPLETED
+
+Successfully implemented window-based grouping for ungrouped tabs:
+
+1. **Modified Core Functions**:
+
+   - Made `render()`, `filterAndRender()`, and `renderTabs()` functions asynchronous
+   - Updated function calls to use `await` where necessary
+
+2. **Enhanced `renderTabs()` Function**:
+
+   - Now fetches all open windows using `chrome.windows.getAll()`
+   - Groups ungrouped tabs by their `windowId`
+   - Creates collapsible window sections similar to the Groups tab pattern
+
+3. **UI Implementation**:
+
+   - Each window section shows "Window 1", "Window 2", etc.
+   - Collapsible headers with expand/collapse icons
+   - Maintains existing collapse state using `this.collapsedWindows`
+   - Consistent styling with the Groups tab window sections
+
+4. **User Experience**:
+   - Users can now easily see which tabs belong to which window
+   - Collapsible sections reduce visual clutter
+   - Maintains all existing tab functionality (pin, close, duplicate, etc.)
+   - Consistent behavior with the Groups tab window organization
+
 ## Recent Changes Summary
 
 1. **Search Results Project Display** (June 30, 2025):
@@ -94,10 +122,17 @@ Added comprehensive search filtering functionality:
    - Enhanced interaction patterns with hover states
 
 3. **Search Filters** (June 30, 2025):
+
    - Added filter controls to search results
    - Users can filter by tabs, bookmarks, grouped tabs, and projects
    - Filters update results dynamically
    - Clean integration with existing search functionality
+
+4. **Window-Based Tab Grouping** (June 30, 2025):
+   - All Tabs section now groups ungrouped tabs by window
+   - Collapsible window sections with consistent UI patterns
+   - Maintains existing tab functionality and interactions
+   - Provides better organization for users with multiple windows
 
 ## Key Implementation Details
 
@@ -107,9 +142,12 @@ The implementation leverages modern web standards and Chrome Extension APIs:
 - Event delegation for efficient event handling
 - Consistent visual design language throughout
 - Proper state management for filters and UI state
+- Asynchronous functions for Chrome API calls
+- Window-based organization using `chrome.windows.getAll()`
 
 ## Technical Notes
 
 - The stylelint error about CSS syntax is a false positive - the JavaScript file is being incorrectly analyzed as CSS
 - All functionality is working correctly despite the linter warning
 - The implementation maintains backward compatibility with existing features
+- Window collapse state is preserved across re-renders using `this.collapsedWindows`
