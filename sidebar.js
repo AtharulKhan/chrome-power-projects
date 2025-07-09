@@ -209,6 +209,12 @@ class PowerProjectSidebar {
         }
       });
 
+    // Clear cache button
+    document.getElementById("clear-cache-btn").addEventListener("click", () => {
+      this.clearAllData();
+      this.hideSettingsDropdown();
+    });
+
     // Close dropdown when clicking outside
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".settings-dropdown-container")) {
@@ -4424,6 +4430,60 @@ class PowerProjectSidebar {
   async closeSelectedTabs() {
     // Placeholder - implement when selection mode is fully implemented
     console.log("Close selected tabs");
+  }
+
+  // Clear all data functionality
+  async clearAllData() {
+    const confirmMessage = "Are you sure you want to clear all data? This will delete all saved groups and projects. This action cannot be undone.";
+    if (confirm(confirmMessage)) {
+      try {
+        // Clear Chrome storage
+        await chrome.storage.local.remove(["savedGroups", "projects"]);
+        
+        // Clear in-memory data
+        this.savedGroups = [];
+        this.projects = [];
+        this.selectedTabs.clear();
+        
+        // Re-render UI
+        this.renderTabs();
+        this.renderSavedGroups();
+        
+        // Show success message
+        this.showNotification("All data has been cleared successfully", "success");
+      } catch (error) {
+        console.error("Error clearing data:", error);
+        this.showNotification("Failed to clear data: " + error.message, "error");
+      }
+    }
+  }
+
+  // Show notification
+  showNotification(message, type = "info") {
+    // Create notification element
+    const notification = document.createElement("div");
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      background: ${type === "success" ? "#10b981" : type === "error" ? "#ef4444" : "#3b82f6"};
+      color: white;
+      font-size: 14px;
+      z-index: 10002;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.style.animation = "slideOut 0.3s ease";
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
 
   // Auto-refresh functionality

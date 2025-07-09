@@ -1892,7 +1892,7 @@ body {
   padding: 4px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(20px);
-  z-index: 1000;
+  z-index: 10001;
   min-width: 160px;
   animation: dropdownOpen 0.2s ease;
 }
@@ -1941,6 +1941,52 @@ body {
 
 .dropdown-item:hover svg {
   color: #4f46e5;
+}
+
+.dropdown-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item-danger {
+  color: #dc2626;
+}
+
+.dropdown-item-danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.dropdown-item-danger svg {
+  color: #dc2626;
+}
+
+.dropdown-item-danger:hover svg {
+  color: #b91c1c;
+}
+
+/* Notification animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* Keyboard Shortcuts Modal Styles */
